@@ -23,7 +23,7 @@ import (
 	"reflect"
 	"strings"
 
-	papi "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -34,11 +34,13 @@ import (
 	at "sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
 
+// Mutator is the struct of webhook
 type Mutator struct {
 	client  client.Client
 	decoder at.Decoder
 }
 
+// Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 
 	log.V(4).Info("Webhook Invoked", "Request", req.AdmissionRequest)
@@ -78,7 +80,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
 		}
 	}
 
-	podPresetList := &papi.PodPresetList{}
+	podPresetList := &operatorv1alpha1.PodPresetList{}
 
 	err := p.client.List(ctx, &client.ListOptions{Namespace: pod.Namespace}, podPresetList)
 
@@ -118,7 +120,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
 // applyPodPresetsOnPod updates the PodSpec with merged information from all the
 // applicable PodPresets. It ignores the errors of merge functions because merge
 // errors have already been checked in safeToApplyPodPresetsOnPod function.
-func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*papi.PodPreset) {
+func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*operatorv1alpha1.PodPreset) {
 	if len(podPresets) == 0 {
 		return
 	}
@@ -161,7 +163,7 @@ func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*papi.PodPreset) {
 // applyPodPresetsOnContainer injects envVars, VolumeMounts and envFrom from
 // given podPresets in to the given container. It ignores conflict errors
 // because it assumes those have been checked already by the caller.
-func applyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*papi.PodPreset) {
+func applyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*operatorv1alpha1.PodPreset) {
 	envVars, _ := mergeEnv(ctr.Env, podPresets)
 	ctr.Env = envVars
 
@@ -173,8 +175,8 @@ func applyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*papi.PodPre
 }
 
 // filterPodPresets returns list of PodPresets which match given Pod.
-func filterPodPresets(list *papi.PodPresetList, pod *corev1.Pod) ([]*papi.PodPreset, error) {
-	var matchingPPs []*papi.PodPreset
+func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod) ([]*operatorv1alpha1.PodPreset, error) {
+	var matchingPPs []*operatorv1alpha1.PodPreset
 
 	for _, pp := range list.Items {
 		if &pp.Spec.Selector == nil {
@@ -198,7 +200,7 @@ func filterPodPresets(list *papi.PodPresetList, pod *corev1.Pod) ([]*papi.PodPre
 
 // safeToApplyPodPresetsOnPod determines if there is any conflict in information
 // injected by given PodPresets in the Pod.
-func safeToApplyPodPresetsOnPod(pod *corev1.Pod, podPresets []*papi.PodPreset) error {
+func safeToApplyPodPresetsOnPod(pod *corev1.Pod, podPresets []*operatorv1alpha1.PodPreset) error {
 	var errs []error
 
 	// volumes attribute is defined at the Pod level, so determine if volumes
@@ -216,7 +218,7 @@ func safeToApplyPodPresetsOnPod(pod *corev1.Pod, podPresets []*papi.PodPreset) e
 
 // mergeVolumes merges given list of Volumes with the volumes injected by given
 // podPresets. It returns an error if it detects any conflict during the merge.
-func mergeVolumes(volumes []corev1.Volume, podPresets []*papi.PodPreset) ([]corev1.Volume, error) {
+func mergeVolumes(volumes []corev1.Volume, podPresets []*operatorv1alpha1.PodPreset) ([]corev1.Volume, error) {
 	origVolumes := map[string]corev1.Volume{}
 	for _, v := range volumes {
 		origVolumes[v.Name] = v
@@ -258,7 +260,7 @@ func mergeVolumes(volumes []corev1.Volume, podPresets []*papi.PodPreset) ([]core
 
 // safeToApplyPodPresetsOnContainer determines if there is any conflict in
 // information injected by given PodPresets in the given container.
-func safeToApplyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*papi.PodPreset) error {
+func safeToApplyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*operatorv1alpha1.PodPreset) error {
 	var errs []error
 	// check if it is safe to merge env vars and volume mounts from given podpresets and
 	// container's existing env vars.
@@ -274,7 +276,7 @@ func safeToApplyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*papi.
 
 // mergeEnv merges a list of env vars with the env vars injected by given list podPresets.
 // It returns an error if it detects any conflict during the merge.
-func mergeEnv(envVars []corev1.EnvVar, podPresets []*papi.PodPreset) ([]corev1.EnvVar, error) {
+func mergeEnv(envVars []corev1.EnvVar, podPresets []*operatorv1alpha1.PodPreset) ([]corev1.EnvVar, error) {
 	origEnv := map[string]corev1.EnvVar{}
 	for _, v := range envVars {
 		origEnv[v.Name] = v
@@ -311,7 +313,7 @@ func mergeEnv(envVars []corev1.EnvVar, podPresets []*papi.PodPreset) ([]corev1.E
 	return mergedEnv, err
 }
 
-func mergeEnvFrom(envSources []corev1.EnvFromSource, podPresets []*papi.PodPreset) ([]corev1.EnvFromSource, error) {
+func mergeEnvFrom(envSources []corev1.EnvFromSource, podPresets []*operatorv1alpha1.PodPreset) ([]corev1.EnvFromSource, error) {
 	var mergedEnvFrom []corev1.EnvFromSource
 
 	mergedEnvFrom = append(mergedEnvFrom, envSources...)
@@ -331,7 +333,7 @@ func mergeEnvFrom(envSources []corev1.EnvFromSource, podPresets []*papi.PodPrese
 
 // mergeVolumeMounts merges given list of VolumeMounts with the volumeMounts
 // injected by given podPresets. It returns an error if it detects any conflict during the merge.
-func mergeVolumeMounts(volumeMounts []corev1.VolumeMount, podPresets []*papi.PodPreset) ([]corev1.VolumeMount, error) {
+func mergeVolumeMounts(volumeMounts []corev1.VolumeMount, podPresets []*operatorv1alpha1.PodPreset) ([]corev1.VolumeMount, error) {
 
 	origVolumeMounts := map[string]corev1.VolumeMount{}
 	volumeMountsByPath := map[string]corev1.VolumeMount{}
