@@ -1,0 +1,205 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: |-
+      [
+        {
+          "apiVersion": "operator.ibm.com/v1alpha1",
+          "kind": "PodPreset",
+          "metadata": {
+            "name": "ibm-common-service-webhook"
+          },
+          "spec": {}
+        }
+      ]
+    capabilities: Basic Install
+  name: ibm-common-service-webhook.v0.0.1
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: PodPreset is the Schema for the podpresets API
+      kind: PodPreset
+      name: podpresets.operator.ibm.com
+      version: v1alpha1
+  displayName: Ibm Common Service Webhook
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      clusterPermissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - list
+          - get
+          - create
+        - apiGroups:
+          - operator.ibm.com
+          resources:
+          - '*'
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - admissionregistration.k8s.io
+          resources:
+          - mutatingwebhookconfigurations
+          verbs:
+          - '*'
+        serviceAccountName: ibm-common-service-webhook
+      deployments:
+      - name: ibm-common-service-webhook
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              name: ibm-common-service-webhook
+          strategy: {}
+          template:
+            metadata:
+              labels:
+                name: ibm-common-service-webhook
+            spec:
+              containers:
+              - command:
+                - ibm-common-service-webhook
+                env:
+                - name: WATCH_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.annotations['olm.targetNamespaces']
+                - name: POD_NAME
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.name
+                - name: OPERATOR_NAME
+                  value: ibm-common-service-webhook
+                image: quay.io/opencloudio/ibm-cs-webhook:latest
+                imagePullPolicy: Always
+                name: ibm-common-service-webhook
+                ports:
+                - containerPort: 8443
+                  protocol: TCP
+                resources:
+                  limits:
+                    cpu: 200m
+                    memory: 256Mi
+                  requests:
+                    cpu: 200m
+                    memory: 256Mi
+                volumeMounts:
+                - mountPath: /tmp/cert
+                  name: cert
+                  readOnly: true
+              serviceAccountName: ibm-common-service-webhook
+              volumes:
+              - name: cert
+                secret:
+                  defaultMode: 420
+                  secretName: ibm-common-service-webhook-cert
+      permissions:
+      - rules:
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          - services
+          - services/finalizers
+          - endpoints
+          - persistentvolumeclaims
+          - events
+          - configmaps
+          - secrets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - apps
+          resources:
+          - deployments
+          - daemonsets
+          - replicasets
+          - statefulsets
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        - apiGroups:
+          - monitoring.coreos.com
+          resources:
+          - servicemonitors
+          verbs:
+          - get
+          - create
+        - apiGroups:
+          - apps
+          resourceNames:
+          - ibm-common-service-webhook
+          resources:
+          - deployments/finalizers
+          verbs:
+          - update
+        - apiGroups:
+          - ""
+          resources:
+          - pods
+          verbs:
+          - get
+        - apiGroups:
+          - apps
+          resources:
+          - replicasets
+          - deployments
+          verbs:
+          - get
+        - apiGroups:
+          - operator.ibm.com
+          resources:
+          - '*'
+          verbs:
+          - create
+          - delete
+          - get
+          - list
+          - patch
+          - update
+          - watch
+        serviceAccountName: ibm-common-service-webhook
+    strategy: deployment
+  installModes:
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - ""
+  maintainers:
+  - {}
+  maturity: alpha
+  provider: {}
+  version: 0.0.1
