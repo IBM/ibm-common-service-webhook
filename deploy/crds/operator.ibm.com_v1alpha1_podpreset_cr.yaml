@@ -1,0 +1,5 @@
+apiVersion: operator.ibm.com/v1alpha1
+kind: PodPreset
+metadata:
+  name: ibm-common-service-webhook
+spec: {}
