@@ -146,13 +146,6 @@ test: ## Run unit test
 	@echo "Running the tests for $(IMAGE_NAME) on $(LOCAL_ARCH)..."
 	@go test $(TESTARGS) ./pkg/controller/...
 
-test-e2e: ## Run integration e2e tests with different options.
-	@echo ... Running the same e2e tests with different args ...
-	@echo ... Running locally ...
-	- operator-sdk test local ./test/e2e --verbose --up-local --namespace=${NAMESPACE}
-	# @echo ... Running with the param ...
-	# - operator-sdk test local ./test/e2e --namespace=${NAMESPACE}
-
 coverage: ## Run code coverage test
 	@common/scripts/codecov.sh ${BUILD_LOCALLY} "pkg/controller"
 
