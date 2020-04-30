@@ -1,5 +1,19 @@
 # ibm-common-service-webhook
-It is a pod preset mutating admission webhook for the ibm-common-service-operator
+
+It is a pod preset mutating admission webhook for the ibm-common-service-operator. Check the design document [here](./docs/ibm-common-service-webhook.md).
+This operator is from implement of [podpreset](https://kubernetes.io/docs/concepts/workloads/pods/podpreset/)
+
+In order to solve the a known [dns issue](https://github.com/kubernetes/kubernetes/issues/56903) which causes a 5 seconds dns resolving delay in the Openshift and Kubernetes.
+
+This webhook will add dnsconfig into the pods
+
+```yaml
+template:
+  spec:
+    dnsConfig:
+      options:
+        - name: single-request-reopen
+```
 
 ## Supported platforms
 
