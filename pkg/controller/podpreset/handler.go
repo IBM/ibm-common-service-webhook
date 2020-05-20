@@ -82,13 +82,13 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 
 	podPresetList := &operatorv1alpha1.PodPresetList{}
 
-	err := p.client.List(ctx, &client.ListOptions{Namespace: namespace}, podPresetList)
+	err := p.client.List(ctx, &client.ListOptions{}, podPresetList)
 
 	if err != nil {
 		return fmt.Errorf("listing pod presets failed: %v", err)
 	}
 
-	matchingPPs, err := filterPodPresets(podPresetList, pod)
+	matchingPPs, err := filterPodPresets(podPresetList, pod, namespace)
 	if err != nil {
 		return fmt.Errorf("filtering pod presets failed: %v", err)
 	}
@@ -175,10 +175,13 @@ func applyPodPresetsOnContainer(ctr *corev1.Container, podPresets []*operatorv1a
 }
 
 // filterPodPresets returns list of PodPresets which match given Pod.
-func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod) ([]*operatorv1alpha1.PodPreset, error) {
+func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod, namespace string) ([]*operatorv1alpha1.PodPreset, error) {
 	var matchingPPs []*operatorv1alpha1.PodPreset
 
 	for _, pp := range list.Items {
+		if pp.Namespace != namespace {
+			continue
+		}
 		if &pp.Spec.Selector == nil {
 			matchingPPs = append(matchingPPs, &pp)
 			continue
@@ -192,7 +195,7 @@ func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod) ([]
 		if !selector.Matches(labels.Set(pod.Labels)) {
 			continue
 		}
-		log.Info("PodPreset matches pod labels", "PodPreset", pp.GetName(), "Pod", pod.GetName())
+		log.Info("PodPreset matches pod labels", "PodPreset", pp.GetName(), "Pod", pod.GetGenerateName())
 		matchingPPs = append(matchingPPs, &pp)
 	}
 	return matchingPPs, nil
