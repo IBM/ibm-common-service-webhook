@@ -43,9 +43,9 @@ type Mutator struct {
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 
-	log.V(4).Info("Webhook Invoked", "Request", req.AdmissionRequest)
+	log.V(2).Info("Webhook Invoked", "Request", req.AdmissionRequest)
 	pod := &corev1.Pod{}
-
+	ns := req.AdmissionRequest.Namespace
 	err := p.decoder.Decode(req, pod)
 	if err != nil {
 		log.Error(err, "Error occurred Decoding Pod")
@@ -53,7 +53,7 @@ func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 	}
 	copy := pod.DeepCopy()
 
-	err = p.mutatePodsFn(ctx, copy)
+	err = p.mutatePodsFn(ctx, copy, ns)
 
 	if err != nil {
 		log.Error(err, "Error occurred mutating Pod")
@@ -66,7 +66,7 @@ func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 }
 
 // Mutates function values
-func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
+func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace string) error {
 
 	if _, isMirrorPod := pod.Annotations[corev1.MirrorPodAnnotationKey]; isMirrorPod {
 		return nil
@@ -74,15 +74,15 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod) error {
 
 	// Ignore if exclusion annotation is present
 	if podAnnotations := pod.GetAnnotations(); podAnnotations != nil {
-		log.Info("Looking at pod annotations", "found", podAnnotations)
 		if podAnnotations[corev1.PodPresetOptOutAnnotationKey] == "true" {
+			log.Info("Pod has been patched", "Pod Name:", pod.Name)
 			return nil
 		}
 	}
 
 	podPresetList := &operatorv1alpha1.PodPresetList{}
 
-	err := p.client.List(ctx, &client.ListOptions{Namespace: pod.Namespace}, podPresetList)
+	err := p.client.List(ctx, &client.ListOptions{Namespace: namespace}, podPresetList)
 
 	if err != nil {
 		return fmt.Errorf("listing pod presets failed: %v", err)
