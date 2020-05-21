@@ -33,6 +33,7 @@ const (
 	serverPort        int32 = 8443
 	certDir                 = "/tmp/cert"
 	podpresetName           = "cs-podpreset.operator.ibm.com"
+	webhookConfigName       = "ibm-common-service-webhook-configuration"
 )
 
 var log = logf.Log.WithName("controller_podpreset")
@@ -75,6 +76,7 @@ func Add(mgr manager.Manager) error {
 					"name": webhookName,
 				},
 			},
+			MutatingWebhookConfigName: webhookConfigName,
 		},
 	})
 

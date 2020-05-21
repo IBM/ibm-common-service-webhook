@@ -137,7 +137,15 @@ func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*operatorv1alpha1.PodPre
 		if pod.Spec.DNSConfig.Options == nil {
 			pod.Spec.DNSConfig.Options = []corev1.PodDNSConfigOption{}
 		}
-		pod.Spec.DNSConfig.Options = append(pod.Spec.DNSConfig.Options, corev1.PodDNSConfigOption{Name: "single-request-reopen"})
+		exist := false
+		for _, op := range pod.Spec.DNSConfig.Options {
+			if (op == corev1.PodDNSConfigOption{Name: "single-request-reopen"}) {
+				exist = true
+			}
+		}
+		if !exist {
+			pod.Spec.DNSConfig.Options = append(pod.Spec.DNSConfig.Options, corev1.PodDNSConfigOption{Name: "single-request-reopen"})
+		}
 	}
 
 	for i, ctr := range pod.Spec.Containers {
