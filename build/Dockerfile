@@ -10,6 +10,10 @@ COPY build/_output/bin/ibm-cs-webhook ${OPERATOR}
 COPY build/bin /usr/local/bin
 RUN  /usr/local/bin/user_setup
 
+# copy licenses
+RUN mkdir /licenses
+COPY LICENSE /licenses
+
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
 
 USER ${USER_UID}
