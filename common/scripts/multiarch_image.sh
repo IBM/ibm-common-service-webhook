@@ -34,11 +34,11 @@ for arch in ${ALL_PLATFORMS}
 do
     for i in $(seq 1 "${MAX_PULLING_RETRY}")
     do
-        echo "Trying to pull image '${IMAGE_REPO}'/'${IMAGE_NAME}'-'${arch}':'${VERSION}'..."
+        echo "Trying to pull image ${IMAGE_REPO}/${IMAGE_NAME}-${arch}:${VERSION}..."
         docker pull "${IMAGE_REPO}"/"${IMAGE_NAME}"-"${arch}":"${VERSION}" && break
         sleep "${RETRY_INTERVAL}"
         if [ "${i}" -eq "${MAX_PULLING_RETRY}" ]; then
-            echo "Failed to pull image '${IMAGE_REPO}'/'${IMAGE_NAME}'-'${arch}':'${VERSION}'!!!"
+            echo "Failed to pull image ${IMAGE_REPO}/${IMAGE_NAME}-${arch}:${VERSION}!!!"
             exit 1
         fi
     done
@@ -58,9 +58,16 @@ ${CONTAINER_CLI} manifest create "${IMAGE_REPO}"/"${IMAGE_NAME}":latest \
     "${IMAGE_REPO}"/"${IMAGE_NAME}"-amd64:"${VERSION}" \
     "${IMAGE_REPO}"/"${IMAGE_NAME}"-ppc64le:"${VERSION}" \
     "${IMAGE_REPO}"/"${IMAGE_NAME}"-s390x:"${VERSION}"
+echo "Creating the multi-arch image manifest for ${IMAGE_REPO}/${IMAGE_NAME}:1.0.0..."
+${CONTAINER_CLI} manifest create "${IMAGE_REPO}"/"${IMAGE_NAME}":1.0.0 \
+    "${IMAGE_REPO}"/"${IMAGE_NAME}"-amd64:"${VERSION}" \
+    "${IMAGE_REPO}"/"${IMAGE_NAME}"-ppc64le:"${VERSION}" \
+    "${IMAGE_REPO}"/"${IMAGE_NAME}"-s390x:"${VERSION}"
 
 # push multi-arch manifest
 echo "Pushing the multi-arch image manifest for ${IMAGE_REPO}/${IMAGE_NAME}:${VERSION}..."
 ${CONTAINER_CLI} manifest push "${IMAGE_REPO}"/"${IMAGE_NAME}":"${VERSION}"
 echo "Pushing the multi-arch image manifest for ${IMAGE_REPO}/${IMAGE_NAME}:latest..."
 ${CONTAINER_CLI} manifest push "${IMAGE_REPO}"/"${IMAGE_NAME}":latest
+echo "Pushing the multi-arch image manifest for ${IMAGE_REPO}/${IMAGE_NAME}:1.0.0..."
+${CONTAINER_CLI} manifest push "${IMAGE_REPO}"/"${IMAGE_NAME}":1.0.0
