@@ -30,6 +30,8 @@ import (
 
 	"github.com/IBM/ibm-common-service-webhook/pkg/apis"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller"
+	"github.com/IBM/ibm-common-service-webhook/pkg/controller/podpreset"
+	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
 	"github.com/IBM/ibm-common-service-webhook/version"
 
 	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
@@ -45,6 +47,7 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // Change below variables to serve metrics on different host or port.
@@ -130,6 +133,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Start up the wehook server
+	if err := setupWebhooks(mgr); err != nil {
+		log.Error(err, "Error setting up webhook server")
+	}
+
 	// Add the Metrics Service
 	addMetrics(ctx, cfg, namespace)
 
@@ -202,6 +210,30 @@ func serveCRMetrics(cfg *rest.Config) error {
 	// Generate and serve custom resource specific metrics.
 	err = kubemetrics.GenerateAndServeCRMetrics(cfg, ns, filteredGVK, metricsHost, operatorMetricsPort)
 	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func setupWebhooks(mgr manager.Manager) error {
+
+	webhooks.Config.AddWebhook(webhooks.CSWebhook{
+		Name: "ibm-common-service-webhook-mutate",
+		Rule: webhooks.NewRule().
+			OneResource("", "v1", "pod").
+			ForUpdate().
+			ForCreate(),
+		Register: webhooks.AdmissionWebhookRegister{
+			Type: webhooks.MutatingType,
+			Path: "/mutate-ibm-cs-pod",
+			Hook: &admission.Webhook{
+				Handler: podpreset.NewCSMutatingHandler(),
+			},
+		},
+	})
+
+	if err := webhooks.Config.SetupServer(mgr); err != nil {
 		return err
 	}
 

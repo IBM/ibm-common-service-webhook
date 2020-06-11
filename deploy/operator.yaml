@@ -15,7 +15,7 @@ spec:
       serviceAccountName: ibm-common-service-webhook
       containers:
         - name: ibm-common-service-webhook
-          image: quay.io/opencloudio/ibm-cs-webhook:latest
+          image: quay.io/horis233/ibm-cs-webhook:latest
           command:
           - ibm-common-service-webhook
           imagePullPolicy: Always

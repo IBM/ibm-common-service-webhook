@@ -19,7 +19,6 @@ package podpreset
 import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	logf "sigs.k8s.io/controller-runtime/pkg/runtime/log"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 const (
@@ -34,13 +33,6 @@ const (
 var log = logf.Log.WithName("controller_podpreset")
 
 func Add(mgr manager.Manager) error {
-
-	// Setup webhooks
-	log.Info("setting up webhook server")
-	hookServer := mgr.GetWebhookServer()
-
-	log.Info("registering webhooks to the webhook server")
-	hookServer.Register("/mutate-ibm-cs-pod", &webhook.Admission{Handler: &Mutator{}})
 
 	return nil
 }

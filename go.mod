@@ -3,6 +3,7 @@ module github.com/IBM/ibm-common-service-webhook
 go 1.14
 
 require (
+	github.com/operator-framework/operator-lifecycle-manager v0.0.0-20200321030439-57b580e57e88
 	github.com/operator-framework/operator-sdk v0.17.0
 	github.com/spf13/pflag v1.0.5
 	k8s.io/api v0.17.4

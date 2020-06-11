@@ -86,6 +86,10 @@ install: ## Install all resources (CR/CRD's, RBAC and Operator)
 	- kubectl apply -f deploy/secret.yaml -n ${NAMESPACE}
 	@echo ....... Applying Operator .......
 	- kubectl apply -f deploy/operator.yaml -n ${NAMESPACE}
+	@echo ....... Applying Webhook Configuration .......
+	- kubectl apply -f deploy/webhook_configuration.yaml
+	@echo ....... Applying Webhook Service .......
+	- kubectl apply -f deploy/service.yaml -n ${NAMESPACE}
 	@echo ....... Creating the Instance .......
 	- kubectl apply -f deploy/crds/operator.ibm.com_v1alpha1_podpreset_cr.yaml -n ${NAMESPACE}
 
@@ -103,6 +107,10 @@ uninstall: ## Uninstall all that all performed in the $ make install
 	- kubectl delete -f deploy/service_account.yaml -n ${NAMESPACE} --ignore-not-found
 	- kubectl delete -f deploy/role.yaml --ignore-not-found
 	- kubectl delete -f deploy/clusterrole.yaml --ignore-not-found
+	@echo ....... Deleting Webhook Configuration .......
+	- kubectl delete -f deploy/webhook_configuration.yaml
+	@echo ....... Deleting Webhook Service .......
+	- kubectl delete -f deploy/service.yaml -n ${NAMESPACE}
 
 ##@ Development
 
@@ -119,7 +127,7 @@ code-dev: ## Run the default dev commands which are the go tidy, fmt, vet then e
 
 run: ## Run against the configured Kubernetes cluster in ~/.kube/config
 	@echo ....... Start Operator locally with go run ......
-	WATCH_NAMESPACE= DEPLOY_DIR=${PWD}/deploy/crds go run ./cmd/manager/main.go -v=2 --zap-encoder=console
+	WATCH_NAMESPACE=${NAMESPACE} DEPLOY_DIR=${PWD}/deploy/crds go run ./cmd/manager/main.go
 
 ifeq ($(BUILD_LOCALLY),0)
     export CONFIG_DOCKER_TARGET = config-docker

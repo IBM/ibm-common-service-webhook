@@ -42,6 +42,10 @@ type Mutator struct {
 	decoder admission.Decoder
 }
 
+func NewCSMutatingHandler() admission.Handler {
+	return &Mutator{}
+}
+
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
