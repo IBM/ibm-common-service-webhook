@@ -1,0 +1,11 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: ibm-common-service-webhook
+spec:
+  ports:
+    - protocol: TCP
+      port: 443
+      targetPort: 8443
+  selector:
+    name: ibm-common-service-webhook

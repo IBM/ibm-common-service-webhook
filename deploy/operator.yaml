@@ -31,7 +31,7 @@ spec:
             - name: OPERATOR_NAME
               value: "ibm-common-service-webhook"
           ports:
-            - containerPort: 8443
+            - containerPort: 8090
               protocol: TCP
           resources:
             limits:
@@ -41,11 +41,8 @@ spec:
               cpu: 200m
               memory: 256Mi
           volumeMounts:
-            - mountPath: /tmp/cert
-              name: cert
-              readOnly: true
+          - name: webhook-certs
+            mountPath: "/etc/ssl/certs/webhook"
       volumes:
-        - name: cert
-          secret:
-            defaultMode: 420
-            secretName: ibm-common-service-webhook-cert
+      - name: webhook-certs
+        emptyDir: {}

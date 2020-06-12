@@ -18,6 +18,7 @@ package podpreset
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -31,17 +32,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	at "sigs.k8s.io/controller-runtime/pkg/webhook/admission/types"
 )
+
+// +kubebuilder:webhook:path=/mutate-ibm-cs-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=cs-podpreset.operator.ibm.com
 
 // Mutator is the struct of webhook
 type Mutator struct {
 	client  client.Client
-	decoder at.Decoder
+	decoder admission.Decoder
+}
+
+func NewCSMutatingHandler() admission.Handler {
+	return &Mutator{}
 }
 
 // Handle mutates every creating pods
-func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
+func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
 	log.V(2).Info("Webhook Invoked", "Request", req.AdmissionRequest)
 	pod := &corev1.Pod{}
@@ -49,7 +55,7 @@ func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 	err := p.decoder.Decode(req, pod)
 	if err != nil {
 		log.Error(err, "Error occurred Decoding Pod")
-		return admission.ErrorResponse(http.StatusBadRequest, err)
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 	copy := pod.DeepCopy()
 
@@ -57,11 +63,13 @@ func (p *Mutator) Handle(ctx context.Context, req at.Request) at.Response {
 
 	if err != nil {
 		log.Error(err, "Error occurred mutating Pod")
-		return admission.ErrorResponse(http.StatusInternalServerError, err)
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
+	marshaledPod, err := json.Marshal(pod)
+	marshaledcopy, err := json.Marshal(copy)
 
 	// admission.PatchResponse generates a Response containing patches.
-	return admission.PatchResponse(pod, copy)
+	return admission.PatchResponseFromRaw(marshaledPod, marshaledcopy)
 
 }
 
@@ -82,7 +90,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 
 	podPresetList := &operatorv1alpha1.PodPresetList{}
 
-	err := p.client.List(ctx, &client.ListOptions{}, podPresetList)
+	err := p.client.List(ctx, podPresetList, &client.ListOptions{})
 
 	if err != nil {
 		return fmt.Errorf("listing pod presets failed: %v", err)
@@ -403,11 +411,8 @@ func (p *Mutator) InjectClient(c client.Client) error {
 	return nil
 }
 
-// Mutator implements inject.Decoder.
-var _ inject.Decoder = &Mutator{}
-
 // InjectDecoder injects the decoder into the Mutator
-func (p *Mutator) InjectDecoder(d at.Decoder) error {
+func (p *Mutator) InjectDecoder(d admission.Decoder) error {
 	p.decoder = d
 	return nil
 }

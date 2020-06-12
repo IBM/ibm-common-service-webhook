@@ -119,7 +119,7 @@ code-dev: ## Run the default dev commands which are the go tidy, fmt, vet then e
 
 run: ## Run against the configured Kubernetes cluster in ~/.kube/config
 	@echo ....... Start Operator locally with go run ......
-	WATCH_NAMESPACE= DEPLOY_DIR=${PWD}/deploy/crds go run ./cmd/manager/main.go -v=2 --zap-encoder=console
+	WATCH_NAMESPACE=${NAMESPACE} DEPLOY_DIR=${PWD}/deploy/crds go run ./cmd/manager/main.go
 
 ifeq ($(BUILD_LOCALLY),0)
     export CONFIG_DOCKER_TARGET = config-docker
