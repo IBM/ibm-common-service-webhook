@@ -66,19 +66,19 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 
 	cr := &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s.integreatly.org", reconciler.name),
+			Name: fmt.Sprintf("%s.operator.ibm.com", reconciler.name),
 		},
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
 		cr.Webhooks = []v1beta1.MutatingWebhook{
 			{
-				Name:        fmt.Sprintf("%s-mutating-config.integreatly.org", reconciler.name),
+				Name:        fmt.Sprintf("%s-mutating-config.operator.ibm.com", reconciler.name),
 				SideEffects: &sideEffects,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					CABundle: caBundle,
 					Service: &v1beta1.ServiceReference{
-						Namespace: "redhat-rhmi-operator",
+						Namespace: "ibm-common-services",
 						Name:      operatorPodServiceName,
 						Path:      &reconciler.Path,
 						Port:      &port,
@@ -129,7 +129,7 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 				ClientConfig: v1beta1.WebhookClientConfig{
 					CABundle: caBundle,
 					Service: &v1beta1.ServiceReference{
-						Namespace: "redhat-rhmi-operator",
+						Namespace: "ibm-common-services",
 						Name:      operatorPodServiceName,
 						Path:      &reconciler.Path,
 						Port:      &port,

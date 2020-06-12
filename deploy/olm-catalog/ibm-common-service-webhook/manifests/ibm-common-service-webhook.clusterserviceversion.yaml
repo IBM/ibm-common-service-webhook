@@ -90,7 +90,7 @@ spec:
                 imagePullPolicy: Always
                 name: ibm-common-service-webhook
                 ports:
-                - containerPort: 8443
+                - containerPort: 8090
                   protocol: TCP
                 resources:
                   limits:
@@ -100,15 +100,12 @@ spec:
                     cpu: 200m
                     memory: 256Mi
                 volumeMounts:
-                - mountPath: /tmp/cert
-                  name: cert
-                  readOnly: true
+                - mountPath: /etc/ssl/certs/webhook
+                  name: webhook-certs
               serviceAccountName: ibm-common-service-webhook
               volumes:
-              - name: cert
-                secret:
-                  defaultMode: 420
-                  secretName: ibm-common-service-webhook-cert
+              - emptyDir: {}
+                name: webhook-certs
       permissions:
       - rules:
         - apiGroups:
@@ -203,3 +200,27 @@ spec:
   maturity: alpha
   provider: {}
   version: 0.0.1
+  webhookdefinitions:
+  - admissionReviewVersions:
+    - v1beta1
+    containerPort: 443
+    deploymentName: ibm-common-service-webhook
+    failurePolicy: Ignore
+    generateName: cs-podpreset.operator.ibm.com
+    matchPolicy: Exact
+    objectSelector: {}
+    reinvocationPolicy: Never
+    rules:
+    - apiGroups:
+      - ""
+      apiVersions:
+      - v1
+      operations:
+      - CREATE
+      resources:
+      - pods
+      scope: '*'
+    sideEffects: Unknown
+    timeoutSeconds: 30
+    type: MutatingAdmissionWebhook
+    webhookPath: /mutate-pods

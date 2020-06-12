@@ -53,7 +53,7 @@ const (
 	operatorPodPort        = 8090
 	servicePort            = 443
 	mountedCertDir         = "/etc/ssl/certs/webhook"
-	caConfigMap            = "ibm-cs-operator-ca"
+	caConfigMap            = "ibm-cs-operator-webhook-ca"
 	caConfigMapAnnotation  = "service.beta.openshift.io/inject-cabundle"
 	caServiceAnnotation    = "service.beta.openshift.io/serving-cert-secret-name"
 )
@@ -82,7 +82,6 @@ func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager) error {
 	if !enabled() {
 		return nil
 	}
-
 	// Create a new client to reconcile the Service. `mgr.GetClient()` can't
 	// be used as it relies on the cache that hasn't been initialized yet
 	client, err := k8sclient.New(mgr.GetConfig(), k8sclient.Options{
@@ -140,7 +139,7 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 	caConfigMap := &corev1.ConfigMap{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      webhookConfig.CAConfigMap,
-			Namespace: "ibm-cs-operator",
+			Namespace: "ibm-common-services",
 			Annotations: map[string]string{
 				caConfigMapAnnotation: "true",
 			},
@@ -181,7 +180,7 @@ func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, clie
 	// Get the service. If it's not found, create it
 	service := &corev1.Service{}
 	if err := client.Get(ctx, k8sclient.ObjectKey{
-		Namespace: "ibm-cs-operator",
+		Namespace: "ibm-common-services",
 		Name:      operatorPodServiceName,
 	}, service); err != nil {
 		if !errors.IsNotFound(err) {
@@ -240,7 +239,7 @@ func (webhookConfig *CSWebhookConfig) setupCerts(ctx context.Context, client k8s
 	// Wait for the secret to te created
 	secret := &corev1.Secret{}
 	err := wait.PollImmediate(time.Second*1, time.Second*30, func() (bool, error) {
-		err := client.Get(ctx, k8sclient.ObjectKey{Namespace: "ibm-cs-operator", Name: "cs-webhook-cert"}, secret)
+		err := client.Get(ctx, k8sclient.ObjectKey{Namespace: "ibm-common-services", Name: "cs-webhook-cert"}, secret)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return false, nil
@@ -268,7 +267,7 @@ func (webhookConfig *CSWebhookConfig) waitForCAInConfigMap(ctx context.Context, 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
 		caConfigMap := &corev1.ConfigMap{}
 		if err := client.Get(ctx,
-			k8sclient.ObjectKey{Name: webhookConfig.CAConfigMap, Namespace: "ibm-cs-operator"},
+			k8sclient.ObjectKey{Name: webhookConfig.CAConfigMap, Namespace: "ibm-common-services"},
 			caConfigMap,
 		); err != nil {
 			if errors.IsNotFound(err) {

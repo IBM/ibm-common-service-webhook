@@ -223,7 +223,8 @@ func setupWebhooks(mgr manager.Manager) error {
 		Rule: webhooks.NewRule().
 			OneResource("", "v1", "pod").
 			ForUpdate().
-			ForCreate(),
+			ForCreate().
+			NamespacedScope(),
 		Register: webhooks.AdmissionWebhookRegister{
 			Type: webhooks.MutatingType,
 			Path: "/mutate-ibm-cs-pod",

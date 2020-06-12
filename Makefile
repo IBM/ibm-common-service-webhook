@@ -86,10 +86,6 @@ install: ## Install all resources (CR/CRD's, RBAC and Operator)
 	- kubectl apply -f deploy/secret.yaml -n ${NAMESPACE}
 	@echo ....... Applying Operator .......
 	- kubectl apply -f deploy/operator.yaml -n ${NAMESPACE}
-	@echo ....... Applying Webhook Configuration .......
-	- kubectl apply -f deploy/webhook_configuration.yaml
-	@echo ....... Applying Webhook Service .......
-	- kubectl apply -f deploy/service.yaml -n ${NAMESPACE}
 	@echo ....... Creating the Instance .......
 	- kubectl apply -f deploy/crds/operator.ibm.com_v1alpha1_podpreset_cr.yaml -n ${NAMESPACE}
 
@@ -107,10 +103,6 @@ uninstall: ## Uninstall all that all performed in the $ make install
 	- kubectl delete -f deploy/service_account.yaml -n ${NAMESPACE} --ignore-not-found
 	- kubectl delete -f deploy/role.yaml --ignore-not-found
 	- kubectl delete -f deploy/clusterrole.yaml --ignore-not-found
-	@echo ....... Deleting Webhook Configuration .......
-	- kubectl delete -f deploy/webhook_configuration.yaml
-	@echo ....... Deleting Webhook Service .......
-	- kubectl delete -f deploy/service.yaml -n ${NAMESPACE}
 
 ##@ Development
 
