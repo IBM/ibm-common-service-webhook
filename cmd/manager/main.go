@@ -221,7 +221,7 @@ func setupWebhooks(mgr manager.Manager) error {
 	webhooks.Config.AddWebhook(webhooks.CSWebhook{
 		Name: "ibm-common-service-webhook-mutate",
 		Rule: webhooks.NewRule().
-			OneResource("", "v1", "pod").
+			OneResource("", "v1", "pods").
 			ForUpdate().
 			ForCreate().
 			NamespacedScope(),
@@ -229,7 +229,9 @@ func setupWebhooks(mgr manager.Manager) error {
 			Type: webhooks.MutatingType,
 			Path: "/mutate-ibm-cs-pod",
 			Hook: &admission.Webhook{
-				Handler: podpreset.NewCSMutatingHandler(),
+				Handler: &podpreset.Mutator{
+					Client: mgr.GetClient(),
+				},
 			},
 		},
 	})
