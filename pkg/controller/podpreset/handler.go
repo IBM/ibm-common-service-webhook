@@ -30,15 +30,13 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/runtime/inject"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +kubebuilder:webhook:path=/mutate-ibm-cs-pod,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=cs-podpreset.operator.ibm.com
-
+// +k8s:deepcopy-gen=false
 // Mutator is the struct of webhook
 type Mutator struct {
-	client  client.Client
+	Client  client.Client
 	decoder admission.Decoder
 }
 
@@ -49,7 +47,7 @@ func NewCSMutatingHandler() admission.Handler {
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	log.V(2).Info("Webhook Invoked", "Request", req.AdmissionRequest)
+	log.Info("Webhook Invoked", "Request", req.AdmissionRequest)
 	pod := &corev1.Pod{}
 	ns := req.AdmissionRequest.Namespace
 	err := p.decoder.Decode(req, pod)
@@ -90,7 +88,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 
 	podPresetList := &operatorv1alpha1.PodPresetList{}
 
-	err := p.client.List(ctx, podPresetList, &client.ListOptions{})
+	err := p.Client.List(ctx, podPresetList, &client.ListOptions{})
 
 	if err != nil {
 		return fmt.Errorf("listing pod presets failed: %v", err)
@@ -400,15 +398,6 @@ func mergeVolumeMounts(volumeMounts []corev1.VolumeMount, podPresets []*operator
 	}
 
 	return mergedVolumeMounts, err
-}
-
-// Mutator implements inject.Client.
-var _ inject.Client = &Mutator{}
-
-// InjectClient injects the client into the PodAnnotator
-func (p *Mutator) InjectClient(c client.Client) error {
-	p.client = c
-	return nil
 }
 
 // InjectDecoder injects the decoder into the Mutator

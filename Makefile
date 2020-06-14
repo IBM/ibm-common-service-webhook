@@ -78,8 +78,8 @@ install: ## Install all resources (CR/CRD's, RBAC and Operator)
 	- kubectl apply -f deploy/crds/operator.ibm.com_podpresets_crd.yaml
 	@echo ....... Applying RBAC .......
 	- kubectl apply -f deploy/service_account.yaml -n ${NAMESPACE}
-	- kubectl apply -f deploy/role.yaml
-	- kubectl apply -f deploy/role_binding.yaml
+	- kubectl apply -f deploy/role.yaml -n ${NAMESPACE}
+	- kubectl apply -f deploy/role_binding.yaml -n ${NAMESPACE}
 	- kubectl apply -f deploy/clusterrole.yaml
 	- kubectl apply -f deploy/cluster_role_binding.yaml
 	@echo ....... Applying Secret .......
