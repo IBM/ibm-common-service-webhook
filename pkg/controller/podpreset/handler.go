@@ -37,11 +37,7 @@ import (
 // Mutator is the struct of webhook
 type Mutator struct {
 	Client  client.Client
-	decoder admission.Decoder
-}
-
-func NewCSMutatingHandler() admission.Handler {
-	return &Mutator{}
+	decoder *admission.Decoder
 }
 
 // Handle mutates every creating pods
@@ -401,7 +397,7 @@ func mergeVolumeMounts(volumeMounts []corev1.VolumeMount, podPresets []*operator
 }
 
 // InjectDecoder injects the decoder into the Mutator
-func (p *Mutator) InjectDecoder(d admission.Decoder) error {
+func (p *Mutator) InjectDecoder(d *admission.Decoder) error {
 	p.decoder = d
 	return nil
 }
