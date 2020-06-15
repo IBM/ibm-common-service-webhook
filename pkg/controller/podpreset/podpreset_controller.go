@@ -34,12 +34,7 @@ import (
 )
 
 const (
-	webhookName             = "ibm-common-service-webhook"
-	webhookSecretName       = "ibm-common-service-webhook-cert"
-	serverPort        int32 = 8443
-	certDir                 = "/tmp/cert"
-	podpresetName           = "cs-podpreset.operator.ibm.com"
-	webhookConfigName       = "ibm-common-service-webhook-configuration"
+	podpresetName = "cs-podpreset.operator.ibm.com"
 )
 
 var log = logf.Log.WithName("controller_podpreset")

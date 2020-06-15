@@ -49,8 +49,8 @@ type CSWebhook struct {
 }
 
 const (
-	operatorPodServiceName = "ibm-common-service-webhooks"
-	operatorPodPort        = 8090
+	operatorPodServiceName = "ibm-common-service-webhook"
+	operatorPodPort        = 8443
 	servicePort            = 443
 	mountedCertDir         = "/etc/ssl/certs/webhook"
 	caConfigMap            = "ibm-cs-operator-webhook-ca"
@@ -223,8 +223,8 @@ func createService(ctx context.Context, client k8sclient.Client, owner ownerutil
 		service.Spec.Ports = []corev1.ServicePort{
 			{
 				Protocol:   corev1.ProtocolTCP,
-				Port:       443,
-				TargetPort: intstr.FromInt(8090),
+				Port:       int32(servicePort),
+				TargetPort: intstr.FromInt(operatorPodPort),
 			},
 		}
 
