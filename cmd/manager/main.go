@@ -219,7 +219,7 @@ func serveCRMetrics(cfg *rest.Config) error {
 func setupWebhooks(mgr manager.Manager) error {
 
 	webhooks.Config.AddWebhook(webhooks.CSWebhook{
-		Name: "ibm-common-service-webhook-mutate",
+		Name: "ibm-common-service-webhook-configuration",
 		Rule: webhooks.NewRule().
 			OneResource("", "v1", "pods").
 			ForUpdate().

@@ -90,7 +90,7 @@ spec:
                 imagePullPolicy: Always
                 name: ibm-common-service-webhook
                 ports:
-                - containerPort: 8090
+                - containerPort: 8443
                   protocol: TCP
                 resources:
                   limits:
@@ -200,27 +200,3 @@ spec:
   maturity: alpha
   provider: {}
   version: 0.0.1
-  webhookdefinitions:
-  - admissionReviewVersions:
-    - v1beta1
-    containerPort: 443
-    deploymentName: ibm-common-service-webhook
-    failurePolicy: Ignore
-    generateName: cs-podpreset.operator.ibm.com
-    matchPolicy: Exact
-    objectSelector: {}
-    reinvocationPolicy: Never
-    rules:
-    - apiGroups:
-      - ""
-      apiVersions:
-      - v1
-      operations:
-      - CREATE
-      resources:
-      - pods
-      scope: '*'
-    sideEffects: Unknown
-    timeoutSeconds: 30
-    type: MutatingAdmissionWebhook
-    webhookPath: /mutate-pods

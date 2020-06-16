@@ -66,14 +66,14 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 
 	cr := &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s.operator.ibm.com", reconciler.name),
+			Name: fmt.Sprintf("%s", reconciler.name),
 		},
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
 		cr.Webhooks = []v1beta1.MutatingWebhook{
 			{
-				Name:        fmt.Sprintf("%s-mutating-config.operator.ibm.com", reconciler.name),
+				Name:        fmt.Sprintf("%s", reconciler.name),
 				SideEffects: &sideEffects,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					CABundle: caBundle,
@@ -117,14 +117,14 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 
 	cr := &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s.integreatly.org", reconciler.name),
+			Name: fmt.Sprintf("%s", reconciler.name),
 		},
 	}
 
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
 		cr.Webhooks = []v1beta1.ValidatingWebhook{
 			{
-				Name:        fmt.Sprintf("%s-validating-config.integreatly.org", reconciler.name),
+				Name:        fmt.Sprintf("%s", reconciler.name),
 				SideEffects: &sideEffects,
 				ClientConfig: v1beta1.WebhookClientConfig{
 					CABundle: caBundle,
