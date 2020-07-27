@@ -29,12 +29,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
-// +k8s:deepcopy-gen=false
 // Mutator is the struct of webhook
+// +k8s:deepcopy-gen=false
 type Mutator struct {
 	Client  client.Client
 	decoder *admission.Decoder
@@ -43,12 +44,12 @@ type Mutator struct {
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	log.Info("Webhook Invoked", "Request", req.AdmissionRequest)
+	klog.Info("Webhook Invoked", "Request", req.AdmissionRequest)
 	pod := &corev1.Pod{}
 	ns := req.AdmissionRequest.Namespace
 	err := p.decoder.Decode(req, pod)
 	if err != nil {
-		log.Error(err, "Error occurred Decoding Pod")
+		klog.Error(err, "Error occurred Decoding Pod")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	copy := pod.DeepCopy()
@@ -56,7 +57,7 @@ func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.R
 	err = p.mutatePodsFn(ctx, copy, ns)
 
 	if err != nil {
-		log.Error(err, "Error occurred mutating Pod")
+		klog.Error(err, "Error occurred mutating Pod")
 		return admission.Errored(http.StatusInternalServerError, err)
 	}
 	marshaledPod, err := json.Marshal(pod)
@@ -77,7 +78,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 	// Ignore if exclusion annotation is present
 	if podAnnotations := pod.GetAnnotations(); podAnnotations != nil {
 		if podAnnotations[corev1.PodPresetOptOutAnnotationKey] == "true" {
-			log.Info("Pod has been patched", "Pod Name:", pod.Name)
+			klog.Infof("Pod %s has been patched", pod.Name)
 			return nil
 		}
 	}
@@ -108,13 +109,13 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 	err = safeToApplyPodPresetsOnPod(pod, matchingPPs)
 	if err != nil {
 		// conflict, ignore the error, but raise an event
-		log.Info("conflict occurred while applying podpresets: %s on pod", "Names", strings.Join(presetNames, ","), "Pod Name", pod.GetGenerateName())
+		klog.Infof("conflict occurred while applying. Podpreset names: %s; Pod Name: %s", strings.Join(presetNames, ","), pod.GetGenerateName())
 		return nil
 	}
 
 	applyPodPresetsOnPod(pod, matchingPPs)
 
-	log.Info("applied podpresets", "Names", strings.Join(presetNames, ","), "Pod Name", pod.GetGenerateName())
+	klog.Infof("applied podpresets. Podpreset names: %s; Pod Name: %s", strings.Join(presetNames, ","), pod.GetGenerateName())
 
 	return nil
 }
@@ -205,7 +206,7 @@ func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod, nam
 		if !selector.Matches(labels.Set(pod.Labels)) {
 			continue
 		}
-		log.Info("PodPreset matches pod labels", "PodPreset", pp.GetName(), "Pod", pod.GetGenerateName())
+		klog.Info("PodPreset matches pod labels", "PodPreset", pp.GetName(), "Pod", pod.GetGenerateName())
 		matchingPPs = append(matchingPPs, &pp)
 	}
 	return matchingPPs, nil
