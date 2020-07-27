@@ -24,7 +24,6 @@ import (
 	"reflect"
 	"strings"
 
-	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -32,6 +31,8 @@ import (
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
 )
 
 // Mutator is the struct of webhook

@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -38,8 +39,11 @@ type CSWebhookConfig struct {
 // endpoing to the webhook server and to reconcile the ValidatingWebhookConfiguration
 // that points to the server.
 type CSWebhook struct {
-	// Name of the webhook. Used to generate a name for the ValidatingWebhookConfiguration
+	// Name of the webhookConfiguration.
 	Name string
+
+	// Name of the webhook.
+	WebhookName string
 
 	// Rule for the webhook to be triggered
 	Rule RuleWithOperations
@@ -146,14 +150,17 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 		},
 	}
 
+	klog.Info("Creating common service webhook CA ConfigMap")
 	err := client.Create(ctx, caConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
+		klog.Error(err)
 		return err
 	}
 
 	// Wait for the config map to be injected with the CA
 	caBundle, err := webhookConfig.waitForCAInConfigMap(ctx, client)
 	if err != nil {
+		klog.Error(err)
 		return err
 	}
 
@@ -165,8 +172,10 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 		}
 
 		reconciler.SetName(webhook.Name)
+		reconciler.SetWebhookName(webhook.WebhookName)
 		reconciler.SetRule(webhook.Rule)
 
+		klog.Infof("Reconciling webhook %s", webhook.Name)
 		if err := reconciler.Reconcile(ctx, client, caBundle); err != nil {
 			return err
 		}
@@ -177,6 +186,8 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 
 // ReconcileService creates or updates the service that points to the Pod
 func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner) error {
+
+	klog.Info("Reconciling common service webhook service")
 	// Get the service. If it's not found, create it
 	service := &corev1.Service{}
 	if err := client.Get(ctx, k8sclient.ObjectKey{
@@ -201,6 +212,8 @@ func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, clie
 }
 
 func createService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner) error {
+	klog.Info("Creating common service webhook service")
+
 	service := &corev1.Service{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      operatorPodServiceName,
@@ -230,6 +243,9 @@ func createService(ctx context.Context, client k8sclient.Client, owner ownerutil
 
 		return nil
 	})
+	if err != nil {
+		klog.Error(err)
+	}
 	return err
 }
 
@@ -262,6 +278,8 @@ func (webhookConfig *CSWebhookConfig) setupCerts(ctx context.Context, client k8s
 }
 
 func (webhookConfig *CSWebhookConfig) waitForCAInConfigMap(ctx context.Context, client k8sclient.Client) ([]byte, error) {
+	klog.Info("Waiting for common service webhook CA generated")
+
 	var caBundle []byte
 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {

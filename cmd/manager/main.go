@@ -212,8 +212,10 @@ func serveCRMetrics(cfg *rest.Config) error {
 
 func setupWebhooks(mgr manager.Manager) error {
 
+	klog.Info("Creating common service webhook configuration")
 	webhooks.Config.AddWebhook(webhooks.CSWebhook{
-		Name: "ibm-common-service-webhook-configuration",
+		Name:        "ibm-common-service-webhook-configuration",
+		WebhookName: "cs-podpreset.operator.ibm.com",
 		Rule: webhooks.NewRule().
 			OneResource("", "v1", "pods").
 			ForUpdate().
@@ -230,6 +232,7 @@ func setupWebhooks(mgr manager.Manager) error {
 		},
 	})
 
+	klog.Info("setting up webhook server")
 	if err := webhooks.Config.SetupServer(mgr); err != nil {
 		return err
 	}
