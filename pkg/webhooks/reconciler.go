@@ -71,7 +71,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 		sideEffects    = v1beta1.SideEffectClassNone
 		port           = int32(servicePort)
 		matchPolicy    = v1beta1.Exact
-		failurePolicy  = v1beta1.Fail
+		ignorePolicy   = v1beta1.Ignore
 		timeoutSeconds = int32(30)
 	)
 
@@ -109,7 +109,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 				},
 				MatchPolicy:             &matchPolicy,
 				AdmissionReviewVersions: []string{"v1beta1"},
-				FailurePolicy:           &failurePolicy,
+				FailurePolicy:           &ignorePolicy,
 				TimeoutSeconds:          &timeoutSeconds,
 			},
 		}
