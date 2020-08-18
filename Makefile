@@ -40,8 +40,9 @@ MARKDOWN_LINT_WHITELIST=https://quay.io/cnr
 
 TESTARGS_DEFAULT := "-v"
 export TESTARGS ?= $(TESTARGS_DEFAULT)
-VERSION ?= $(shell cat ./version/version.go | grep "Version =" | awk '{ print $$3}' | tr -d '"')
-
+VERSION ?= $(shell git describe --exact-match 2> /dev/null || \
+                git describe --match=$(git rev-parse --short=8 HEAD) --always --dirty --abbrev=8)
+RELEASE_VERSION ?= $(shell cat ./version/version.go | grep "Version =" | awk '{ print $$3}' | tr -d '"')
 LOCAL_OS := $(shell uname)
 ifeq ($(LOCAL_OS),Linux)
     TARGET_OS ?= linux
@@ -158,7 +159,7 @@ scorecard: ## Run scorecard test
 ##@ Release
 
 multiarch-image: $(CONFIG_DOCKER_TARGET)
-	@MAX_PULLING_RETRY=20 RETRY_INTERVAL=30 common/scripts/multiarch_image.sh $(REGISTRY) $(IMAGE_NAME) $(VERSION)
+	@MAX_PULLING_RETRY=20 RETRY_INTERVAL=30 common/scripts/multiarch_image.sh $(REGISTRY) $(IMAGE_NAME) $(VERSION) $(RELEASE_VERSION)
 
 csv: ## Push CSV package to the catalog
 	@RELEASE=${CSV_VERSION} common/scripts/push-csv.sh
