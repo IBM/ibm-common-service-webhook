@@ -45,7 +45,7 @@ type Mutator struct {
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	klog.Info("Webhook Invoked", "Request", req.AdmissionRequest)
+	klog.Infof("Webhook is invoked by pod %s/%s", req.AdmissionRequest.Namespace, req.AdmissionRequest.Name)
 	pod := &corev1.Pod{}
 	ns := req.AdmissionRequest.Namespace
 	err := p.decoder.Decode(req, pod)
