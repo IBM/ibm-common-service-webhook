@@ -36,7 +36,7 @@ type CSWebhookConfig struct {
 
 // CSWebhook acts as a single source of truth for validating webhooks
 // managed by the operator. It's data are used both for registering the
-// endpoing to the webhook server and to reconcile the ValidatingWebhookConfiguration
+// endpoint to the webhook server and to reconcile the ValidatingWebhookConfiguration
 // that points to the server.
 type CSWebhook struct {
 	// Name of the webhookConfiguration.
@@ -64,7 +64,7 @@ const (
 
 // Config is a global instance. The same instance is needed in order to use the
 // same configuration for the webhooks server that's run at startup and the
-// reconcilliation of the ValidatingWebhookConfiguration CRs
+// reconciliation of the ValidatingWebhookConfiguration CRs
 var Config *CSWebhookConfig = &CSWebhookConfig{
 	// Port that the webhook service is pointing to
 	Port: operatorPodPort,
@@ -124,7 +124,7 @@ func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager) error {
 
 // Reconcile reconciles a `ValidationWebhookConfiguration` object for each webhook
 // in `webhookConfig.Webhooks`, using the rules and the path as it's generated
-// by controler-runtime webhook builder.
+// by controller-runtime webhook builder.
 // It reconciles a Service that exposes the webhook server
 // A ownerRef to the owner parameter is set on the reconciled resources. This
 // parameter is optional, if `nil` is passed, no ownerReference will be set
@@ -333,7 +333,7 @@ func (webhookConfig *CSWebhookConfig) saveCertFromSecret(secretData map[string][
 
 func enabled() bool {
 	// The webhooks feature can't work when the operator runs locally, as it
-	// needs to be accessible by kubernetes and depends on the TLS certificates
+	// needs to be accessible by Kubernetes and depends on the TLS certificates
 	// being mounted
 	return os.Getenv(k8sutil.ForceRunModeEnv) != string(k8sutil.LocalRunMode)
 }
