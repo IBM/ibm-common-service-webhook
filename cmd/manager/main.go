@@ -128,7 +128,7 @@ func main() {
 	}
 
 	// Start up the wehook server
-	if err := setupWebhooks(mgr); err != nil {
+	if err := setupWebhooks(mgr, namespace); err != nil {
 		klog.Error(err, "Error setting up webhook server")
 	}
 
@@ -210,7 +210,7 @@ func serveCRMetrics(cfg *rest.Config) error {
 	return nil
 }
 
-func setupWebhooks(mgr manager.Manager) error {
+func setupWebhooks(mgr manager.Manager, namespace string) error {
 
 	klog.Info("Creating common service webhook configuration")
 	webhooks.Config.AddWebhook(webhooks.CSWebhook{
@@ -233,7 +233,7 @@ func setupWebhooks(mgr manager.Manager) error {
 	})
 
 	klog.Info("setting up webhook server")
-	if err := webhooks.Config.SetupServer(mgr); err != nil {
+	if err := webhooks.Config.SetupServer(mgr, namespace); err != nil {
 		return err
 	}
 

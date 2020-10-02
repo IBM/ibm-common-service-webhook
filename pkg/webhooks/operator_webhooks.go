@@ -82,7 +82,7 @@ var Config *CSWebhookConfig = &CSWebhookConfig{
 // SetupServer sets up the webhook server managed by mgr with the settings from
 // webhookConfig. It sets the port and cert dir based on the settings and
 // registers the Validator implementations from each webhook from webhookConfig.Webhooks
-func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager) error {
+func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager, namespace string) error {
 	if !enabled() {
 		return nil
 	}
@@ -96,11 +96,11 @@ func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager) error {
 	}
 
 	// Create the service pointing to the operator pod
-	if err := webhookConfig.ReconcileService(context.TODO(), client, nil); err != nil {
+	if err := webhookConfig.ReconcileService(context.TODO(), client, nil, namespace); err != nil {
 		return err
 	}
 	// Get the secret with the certificates for the service
-	if err := webhookConfig.setupCerts(context.TODO(), client); err != nil {
+	if err := webhookConfig.setupCerts(context.TODO(), client, namespace); err != nil {
 		return err
 	}
 
@@ -133,8 +133,14 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 		return nil
 	}
 
+	namespace, err := k8sutil.GetWatchNamespace()
+	if err != nil {
+		klog.Error(err, "Failed to get watch namespace")
+		return err
+	}
+
 	// Reconcile the Service
-	if err := webhookConfig.ReconcileService(ctx, client, owner); err != nil {
+	if err := webhookConfig.ReconcileService(ctx, client, owner, namespace); err != nil {
 		return err
 	}
 
@@ -143,7 +149,7 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 	caConfigMap := &corev1.ConfigMap{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      webhookConfig.CAConfigMap,
-			Namespace: "ibm-common-services",
+			Namespace: namespace,
 			Annotations: map[string]string{
 				caConfigMapAnnotation: "true",
 			},
@@ -151,14 +157,14 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 	}
 
 	klog.Info("Creating common service webhook CA ConfigMap")
-	err := client.Create(ctx, caConfigMap)
+	err = client.Create(ctx, caConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		klog.Error(err)
 		return err
 	}
 
 	// Wait for the config map to be injected with the CA
-	caBundle, err := webhookConfig.waitForCAInConfigMap(ctx, client)
+	caBundle, err := webhookConfig.waitForCAInConfigMap(ctx, client, namespace)
 	if err != nil {
 		klog.Error(err)
 		return err
@@ -185,20 +191,20 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 }
 
 // ReconcileService creates or updates the service that points to the Pod
-func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner) error {
+func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner, namespace string) error {
 
 	klog.Info("Reconciling common service webhook service")
 	// Get the service. If it's not found, create it
 	service := &corev1.Service{}
 	if err := client.Get(ctx, k8sclient.ObjectKey{
-		Namespace: "ibm-common-services",
+		Namespace: namespace,
 		Name:      operatorPodServiceName,
 	}, service); err != nil {
 		if !errors.IsNotFound(err) {
 			return err
 		}
 
-		return createService(ctx, client, owner)
+		return createService(ctx, client, owner, namespace)
 	}
 
 	// If the existing service has a different .spec.clusterIP value, delete it
@@ -208,16 +214,16 @@ func (webhookConfig *CSWebhookConfig) ReconcileService(ctx context.Context, clie
 		}
 	}
 
-	return createService(ctx, client, owner)
+	return createService(ctx, client, owner, namespace)
 }
 
-func createService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner) error {
+func createService(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner, namespace string) error {
 	klog.Info("Creating common service webhook service")
 
 	service := &corev1.Service{
 		ObjectMeta: v1.ObjectMeta{
 			Name:      operatorPodServiceName,
-			Namespace: "ibm-common-services",
+			Namespace: namespace,
 		},
 	}
 	_, err := controllerutil.CreateOrUpdate(ctx, client, service, func() error {
@@ -251,11 +257,11 @@ func createService(ctx context.Context, client k8sclient.Client, owner ownerutil
 
 // setupCerts waits for the secret created for the operator Service to exist, and
 // when it's ready, extracts the certificates and saves them in webhookConfig.CertDir
-func (webhookConfig *CSWebhookConfig) setupCerts(ctx context.Context, client k8sclient.Client) error {
+func (webhookConfig *CSWebhookConfig) setupCerts(ctx context.Context, client k8sclient.Client, namespace string) error {
 	// Wait for the secret to te created
 	secret := &corev1.Secret{}
 	err := wait.PollImmediate(time.Second*1, time.Second*30, func() (bool, error) {
-		err := client.Get(ctx, k8sclient.ObjectKey{Namespace: "ibm-common-services", Name: "cs-webhook-cert"}, secret)
+		err := client.Get(ctx, k8sclient.ObjectKey{Namespace: namespace, Name: "cs-webhook-cert"}, secret)
 		if err != nil {
 			if errors.IsNotFound(err) {
 				return false, nil
@@ -277,7 +283,7 @@ func (webhookConfig *CSWebhookConfig) setupCerts(ctx context.Context, client k8s
 	return webhookConfig.saveCertFromSecret(secret.Data, "tls.crt")
 }
 
-func (webhookConfig *CSWebhookConfig) waitForCAInConfigMap(ctx context.Context, client k8sclient.Client) ([]byte, error) {
+func (webhookConfig *CSWebhookConfig) waitForCAInConfigMap(ctx context.Context, client k8sclient.Client, namespace string) ([]byte, error) {
 	klog.Info("Waiting for common service webhook CA generated")
 
 	var caBundle []byte
@@ -285,7 +291,7 @@ func (webhookConfig *CSWebhookConfig) waitForCAInConfigMap(ctx context.Context, 
 	err := wait.PollImmediate(time.Second, time.Second*30, func() (bool, error) {
 		caConfigMap := &corev1.ConfigMap{}
 		if err := client.Get(ctx,
-			k8sclient.ObjectKey{Name: webhookConfig.CAConfigMap, Namespace: "ibm-common-services"},
+			k8sclient.ObjectKey{Name: webhookConfig.CAConfigMap, Namespace: namespace},
 			caConfigMap,
 		); err != nil {
 			if errors.IsNotFound(err) {

@@ -12,6 +12,16 @@ rules:
       - get
       - create
   - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - list
+      - get
+      - create
+      - update
+      - watch
+  - apiGroups:
       - operator.ibm.com
     resources:
       - '*'
