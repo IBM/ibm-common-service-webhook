@@ -19,11 +19,10 @@ package podpreset
 import (
 	"context"
 
-	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
-	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
-
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -31,6 +30,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
+
+	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
+	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
 )
 
 const (
@@ -91,9 +93,23 @@ type ReconcilePodPreset struct {
 func (r *ReconcilePodPreset) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	klog.Infof("Reconciling PodPreset %s/%s", request.Namespace, request.Name)
 
+	ns := &corev1.Namespace{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: request.Namespace}, ns)
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	ns.SetLabels(map[string]string{
+		"managed-by-common-service-webhook": "true",
+	})
+
+	if err := r.client.Update(context.TODO(), ns); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	// Fetch the PodPreset instance
 	instance := &operatorv1alpha1.PodPreset{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
