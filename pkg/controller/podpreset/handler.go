@@ -132,8 +132,6 @@ func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*operatorv1alpha1.PodPre
 	volumes, _ := mergeVolumes(pod.Spec.Volumes, podPresets)
 	pod.Spec.Volumes = volumes
 
-	pod.Spec.Volumes = volumes
-
 	if pod.Spec.DNSPolicy == corev1.DNSClusterFirst {
 		if pod.Spec.DNSConfig == nil {
 			pod.Spec.DNSConfig = &corev1.PodDNSConfig{}
@@ -150,11 +148,6 @@ func applyPodPresetsOnPod(pod *corev1.Pod, podPresets []*operatorv1alpha1.PodPre
 		if !exist {
 			pod.Spec.DNSConfig.Options = append(pod.Spec.DNSConfig.Options, corev1.PodDNSConfigOption{Name: "single-request-reopen"})
 		}
-	}
-
-	for i, ctr := range pod.Spec.Containers {
-		applyPodPresetsOnContainer(&ctr, podPresets)
-		pod.Spec.Containers[i] = ctr
 	}
 
 	for i, ctr := range pod.Spec.Containers {
