@@ -31,7 +31,7 @@ IMAGE_REPO ?= quay.io/opencloudio
 REGISTRY ?= "hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom"
 
 IMAGE_NAME ?= ibm-cs-webhook
-CSV_VERSION ?= 1.2.0
+CSV_VERSION ?= 1.2.1
 
 QUAY_USERNAME ?=
 QUAY_PASSWORD ?=
