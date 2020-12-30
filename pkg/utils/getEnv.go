@@ -14,9 +14,14 @@
 // limitations under the License.
 //
 
-package version
+package utils
 
-var (
-	// Version of the operator
-	Version = "1.3.0"
+import (
+	"os"
 )
+
+// GetWatchNamespace returns the Namespace of the operator
+func GetWatchNamespace() string {
+	ns, _ := os.LookupEnv("WATCH_NAMESPACE")
+	return ns
+}

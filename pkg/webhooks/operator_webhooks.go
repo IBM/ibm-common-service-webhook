@@ -1,3 +1,19 @@
+//
+// Copyright 2020 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package webhooks
 
 import (
@@ -7,7 +23,6 @@ import (
 	"time"
 
 	"github.com/operator-framework/operator-lifecycle-manager/pkg/lib/ownerutil"
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +34,8 @@ import (
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+
+	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
 )
 
 // CSWebhookConfig contains the data and logic to setup the webhooks
@@ -50,6 +67,9 @@ type CSWebhook struct {
 
 	// Register for the webhook into the server
 	Register WebhookRegister
+
+	// EnableNsSelector for add namespaceselector "managed-by-common-service-webhook: true"
+	EnableNsSelector bool
 }
 
 const (
@@ -83,9 +103,6 @@ var Config *CSWebhookConfig = &CSWebhookConfig{
 // webhookConfig. It sets the port and cert dir based on the settings and
 // registers the Validator implementations from each webhook from webhookConfig.Webhooks
 func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager, namespace string) error {
-	if !enabled() {
-		return nil
-	}
 	// Create a new client to reconcile the Service. `mgr.GetClient()` can't
 	// be used as it relies on the cache that hasn't been initialized yet
 	client, err := k8sclient.New(mgr.GetConfig(), k8sclient.Options{
@@ -129,15 +146,8 @@ func (webhookConfig *CSWebhookConfig) SetupServer(mgr manager.Manager, namespace
 // A ownerRef to the owner parameter is set on the reconciled resources. This
 // parameter is optional, if `nil` is passed, no ownerReference will be set
 func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sclient.Client, owner ownerutil.Owner) error {
-	if !enabled() {
-		return nil
-	}
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		klog.Error(err, "Failed to get watch namespace")
-		return err
-	}
+	namespace := utils.GetWatchNamespace()
 
 	// Reconcile the Service
 	if err := webhookConfig.ReconcileService(ctx, client, owner, namespace); err != nil {
@@ -157,7 +167,7 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 	}
 
 	klog.Info("Creating common service webhook CA ConfigMap")
-	err = client.Create(ctx, caConfigMap)
+	err := client.Create(ctx, caConfigMap)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		klog.Error(err)
 		return err
@@ -180,7 +190,9 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 		reconciler.SetName(webhook.Name)
 		reconciler.SetWebhookName(webhook.WebhookName)
 		reconciler.SetRule(webhook.Rule)
-
+		if webhook.EnableNsSelector {
+			reconciler.EnableNsSelector()
+		}
 		klog.Infof("Reconciling webhook %s", webhook.Name)
 		if err := reconciler.Reconcile(ctx, client, caBundle); err != nil {
 			return err
@@ -335,11 +347,4 @@ func (webhookConfig *CSWebhookConfig) saveCertFromSecret(secretData map[string][
 
 	_, err = f.Write(value)
 	return err
-}
-
-func enabled() bool {
-	// The webhooks feature can't work when the operator runs locally, as it
-	// needs to be accessible by Kubernetes and depends on the TLS certificates
-	// being mounted
-	return os.Getenv(k8sutil.ForceRunModeEnv) != string(k8sutil.LocalRunMode)
 }

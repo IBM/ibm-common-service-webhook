@@ -31,7 +31,7 @@ IMAGE_REPO ?= quay.io/opencloudio
 REGISTRY ?= "hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom"
 
 IMAGE_NAME ?= ibm-cs-webhook
-CSV_VERSION ?= 1.2.1
+CSV_VERSION ?= 1.3.0
 
 QUAY_USERNAME ?=
 QUAY_PASSWORD ?=
@@ -151,10 +151,6 @@ test: ## Run unit test
 
 coverage: ## Run code coverage test
 	@common/scripts/codecov.sh ${BUILD_LOCALLY} "pkg/controller"
-
-scorecard: ## Run scorecard test
-	@echo ... Running the scorecard test
-	- operator-sdk scorecard --verbose
 
 ##@ Release
 

@@ -50,7 +50,7 @@ func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.R
 	ns := req.AdmissionRequest.Namespace
 	err := p.decoder.Decode(req, pod)
 	if err != nil {
-		klog.Error(err, "Error occurred Decoding Pod")
+		klog.Error(err, "Error occurred decoding Pod")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	copy := pod.DeepCopy()
@@ -200,7 +200,7 @@ func filterPodPresets(list *operatorv1alpha1.PodPresetList, pod *corev1.Pod, nam
 		if !selector.Matches(labels.Set(pod.Labels)) {
 			continue
 		}
-		klog.Info("PodPreset matches pod labels", "PodPreset", pp.GetName(), "Pod", pod.GetGenerateName())
+		klog.Infof("PodPreset matches pod labels PodPreset: %s, Pod: %s", pp.GetName(), pod.GetGenerateName())
 		matchingPPs = append(matchingPPs, &pp)
 	}
 	return matchingPPs, nil

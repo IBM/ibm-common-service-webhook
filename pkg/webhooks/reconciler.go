@@ -1,15 +1,32 @@
+//
+// Copyright 2020 IBM Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package webhooks
 
 import (
 	"context"
 	"fmt"
 
-	"github.com/operator-framework/operator-sdk/pkg/k8sutil"
 	"k8s.io/api/admissionregistration/v1beta1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
 )
 
 // WebhookReconciler knows how to reconcile webhook configuration CRs
@@ -17,6 +34,7 @@ type WebhookReconciler interface {
 	SetName(name string)
 	SetWebhookName(webhookName string)
 	SetRule(rule RuleWithOperations)
+	EnableNsSelector()
 	Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error
 }
 
@@ -42,6 +60,12 @@ func (reconciler *CompositeWebhookReconciler) SetRule(rule RuleWithOperations) {
 	}
 }
 
+func (reconciler *CompositeWebhookReconciler) EnableNsSelector() {
+	for _, innerReconciler := range reconciler.Reconcilers {
+		innerReconciler.EnableNsSelector()
+	}
+}
+
 func (reconciler *CompositeWebhookReconciler) Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error {
 	for _, innerReconciler := range reconciler.Reconcilers {
 		if err := innerReconciler.Reconcile(ctx, client, caBundle); err != nil {
@@ -53,17 +77,19 @@ func (reconciler *CompositeWebhookReconciler) Reconcile(ctx context.Context, cli
 }
 
 type ValidatingWebhookReconciler struct {
-	Path        string
-	name        string
-	webhookName string
-	rule        RuleWithOperations
+	Path             string
+	name             string
+	webhookName      string
+	rule             RuleWithOperations
+	enableNsSelector bool
 }
 
 type MutatingWebhookReconciler struct {
-	Path        string
-	name        string
-	webhookName string
-	rule        RuleWithOperations
+	Path             string
+	name             string
+	webhookName      string
+	rule             RuleWithOperations
+	enableNsSelector bool
 }
 
 //Reconcile MutatingWebhookConfiguration
@@ -76,11 +102,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 		timeoutSeconds = int32(10)
 	)
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		klog.Error(err, "Failed to get watch namespace")
-		return err
-	}
+	namespace := utils.GetWatchNamespace()
 
 	cr := &v1beta1.MutatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
@@ -92,7 +114,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 	webhookLabel["managed-by-common-service-webhook"] = "true"
 
 	klog.Infof("Creating/Updating MutatingWebhook %s", fmt.Sprintf("%s", reconciler.name))
-	_, err = controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
 		cr.Webhooks = []v1beta1.MutatingWebhook{
 			{
 				Name:        fmt.Sprintf("%s", reconciler.webhookName),
@@ -121,10 +143,14 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 				AdmissionReviewVersions: []string{"v1beta1"},
 				FailurePolicy:           &ignorePolicy,
 				TimeoutSeconds:          &timeoutSeconds,
-				NamespaceSelector: &v1.LabelSelector{
-					MatchLabels: webhookLabel,
-				},
 			},
+		}
+		if reconciler.enableNsSelector {
+			for index := range cr.Webhooks {
+				cr.Webhooks[index].NamespaceSelector = &v1.LabelSelector{
+					MatchLabels: webhookLabel,
+				}
+			}
 		}
 		return nil
 	})
@@ -144,11 +170,7 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 		timeoutSeconds = int32(10)
 	)
 
-	namespace, err := k8sutil.GetWatchNamespace()
-	if err != nil {
-		klog.Error(err, "Failed to get watch namespace")
-		return err
-	}
+	namespace := utils.GetWatchNamespace()
 
 	cr := &v1beta1.ValidatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
@@ -160,7 +182,7 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 	webhookLabel["managed-by-common-service-webhook"] = "true"
 
 	klog.Infof("Creating/Updating ValidatingWebhook %s", fmt.Sprintf("%s", reconciler.name))
-	_, err = controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
+	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
 		cr.Webhooks = []v1beta1.ValidatingWebhook{
 			{
 				Name:        fmt.Sprintf("%s", reconciler.webhookName),
@@ -189,10 +211,14 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 				AdmissionReviewVersions: []string{"v1beta1"},
 				FailurePolicy:           &failurePolicy,
 				TimeoutSeconds:          &timeoutSeconds,
-				NamespaceSelector: &v1.LabelSelector{
-					MatchLabels: webhookLabel,
-				},
 			},
+		}
+		if reconciler.enableNsSelector {
+			for index := range cr.Webhooks {
+				cr.Webhooks[index].NamespaceSelector = &v1.LabelSelector{
+					MatchLabels: webhookLabel,
+				}
+			}
 		}
 		return nil
 	})
@@ -224,4 +250,12 @@ func (reconciler *ValidatingWebhookReconciler) SetRule(rule RuleWithOperations) 
 
 func (reconciler *MutatingWebhookReconciler) SetRule(rule RuleWithOperations) {
 	reconciler.rule = rule
+}
+
+func (reconciler *MutatingWebhookReconciler) EnableNsSelector() {
+	reconciler.enableNsSelector = true
+}
+
+func (reconciler *ValidatingWebhookReconciler) EnableNsSelector() {
+	reconciler.enableNsSelector = true
 }
