@@ -14,7 +14,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-  name: ibm-common-service-webhook.v1.2.1
+  name: ibm-common-service-webhook.v1.3.0
   namespace: placeholder
 spec:
   apiservicedefinitions: {}
@@ -200,4 +200,4 @@ spec:
   maturity: alpha
   provider: {}
   replaces: ibm-common-service-webhook.v0.0.1
-  version: 1.2.1
+  version: 1.3.0
