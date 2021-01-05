@@ -25,3 +25,15 @@ func GetWatchNamespace() string {
 	ns, _ := os.LookupEnv("WATCH_NAMESPACE")
 	return ns
 }
+
+// GetEnableOpreqWebhook check if enable the webhook for the OperandRequest
+func GetEnableOpreqWebhook() bool {
+	enable, ok := os.LookupEnv("ENABLE_OPREQ_WEBHOOK")
+	if !ok {
+		return false
+	}
+	if enable != "TRUE" {
+		return false
+	}
+	return true
+}

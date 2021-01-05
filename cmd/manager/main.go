@@ -87,7 +87,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Start up the wehook server
+	// Start up the webhook server
 	if err := setupWebhooks(mgr, namespace); err != nil {
 		klog.Error(err, "Error setting up webhook server")
 	}
@@ -123,24 +123,26 @@ func setupWebhooks(mgr manager.Manager, namespace string) error {
 		},
 		EnableNsSelector: true,
 	})
-	webhooks.Config.AddWebhook(webhooks.CSWebhook{
-		Name:        "ibm-operandrequest-webhook-configuration",
-		WebhookName: "ibm-cloudpak-operandrequest.operator.ibm.com",
-		Rule: webhooks.NewRule().
-			OneResource("operator.ibm.com", "v1alpha1", "operandrequests").
-			ForUpdate().
-			ForCreate().
-			NamespacedScope(),
-		Register: webhooks.AdmissionWebhookRegister{
-			Type: webhooks.MutatingType,
-			Path: "/mutate-ibm-cp-operandrequest",
-			Hook: &admission.Webhook{
-				Handler: &operandrequest.Mutator{
-					Reader: mgr.GetAPIReader(),
+	if utils.GetEnableOpreqWebhook() {
+		webhooks.Config.AddWebhook(webhooks.CSWebhook{
+			Name:        "ibm-operandrequest-webhook-configuration",
+			WebhookName: "ibm-cloudpak-operandrequest.operator.ibm.com",
+			Rule: webhooks.NewRule().
+				OneResource("operator.ibm.com", "v1alpha1", "operandrequests").
+				ForUpdate().
+				ForCreate().
+				NamespacedScope(),
+			Register: webhooks.AdmissionWebhookRegister{
+				Type: webhooks.MutatingType,
+				Path: "/mutate-ibm-cp-operandrequest",
+				Hook: &admission.Webhook{
+					Handler: &operandrequest.Mutator{
+						Reader: mgr.GetAPIReader(),
+					},
 				},
 			},
-		},
-	})
+		})
+	}
 
 	klog.Info("setting up webhook server")
 	if err := webhooks.Config.SetupServer(mgr, namespace); err != nil {
