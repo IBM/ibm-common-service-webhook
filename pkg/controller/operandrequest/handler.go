@@ -46,7 +46,7 @@ type csMaps struct {
 }
 
 type nsMapping struct {
-	RequestNS string `json:"requested-from-namespace"`
+	RequestNS []string `json:"requested-from-namespace"`
 	CsNs      string `json:"map-common-service-namespace"`
 }
 
@@ -106,7 +106,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, opreq *odlmv1alpha1.OperandR
 	}
 
 	for _, nsMapping := range cmData.NsMappingList {
-		if nsMapping.RequestNS == opreq.Namespace {
+		if findNamespace(nsMapping.RequestNS, opreq.Namespace) {
 			for index, req := range opreq.Spec.Requests {
 				if req.RegistryNamespace == defaultCsNs {
 					req.RegistryNamespace = nsMapping.CsNs
@@ -118,6 +118,15 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, opreq *odlmv1alpha1.OperandR
 	}
 
 	return nil
+}
+
+func findNamespace(nsList []string, nsName string) (exist bool) {
+	for _, ns := range nsList {
+		if ns == nsName {
+			return true
+		}
+	}
+	return
 }
 
 // InjectDecoder injects the decoder into the Mutator
