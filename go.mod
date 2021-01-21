@@ -15,5 +15,7 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.2+incompatible // Required by OLM
+	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2 // fix vulnerability: CVE-2021-3121 in github.com/gogo/protobuf < v1.3.2
 	k8s.io/client-go => k8s.io/client-go v0.17.4 // Required by prometheus-operator
+
 )
