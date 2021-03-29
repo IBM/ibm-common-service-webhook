@@ -31,7 +31,6 @@ IMAGE_REPO ?= quay.io/opencloudio
 REGISTRY ?= "hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom"
 
 IMAGE_NAME ?= ibm-cs-webhook
-CSV_VERSION ?= 1.3.0
 
 QUAY_USERNAME ?=
 QUAY_PASSWORD ?=
@@ -158,7 +157,7 @@ multiarch-image: $(CONFIG_DOCKER_TARGET)
 	@MAX_PULLING_RETRY=20 RETRY_INTERVAL=30 common/scripts/multiarch_image.sh $(REGISTRY) $(IMAGE_NAME) $(VERSION) $(RELEASE_VERSION)
 
 csv: ## Push CSV package to the catalog
-	@RELEASE=${CSV_VERSION} common/scripts/push-csv.sh
+	@RELEASE=${RELEASE_VERSION} common/scripts/push-csv.sh
 
 all: check test coverage build images
 
