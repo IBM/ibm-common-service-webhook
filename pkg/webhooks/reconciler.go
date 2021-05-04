@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"k8s.io/api/admissionregistration/v1beta1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 	k8sclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -95,16 +95,16 @@ type MutatingWebhookReconciler struct {
 //Reconcile MutatingWebhookConfiguration
 func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error {
 	var (
-		sideEffects    = v1beta1.SideEffectClassNone
+		sideEffects    = admissionregistrationv1.SideEffectClassNone
 		port           = int32(servicePort)
-		matchPolicy    = v1beta1.Exact
-		ignorePolicy   = v1beta1.Ignore
+		matchPolicy    = admissionregistrationv1.Exact
+		ignorePolicy   = admissionregistrationv1.Ignore
 		timeoutSeconds = int32(10)
 	)
 
 	namespace := utils.GetWatchNamespace()
 
-	cr := &v1beta1.MutatingWebhookConfiguration{
+	cr := &admissionregistrationv1.MutatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
 			Name: fmt.Sprintf("%s", reconciler.name),
 		},
@@ -115,23 +115,23 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 
 	klog.Infof("Creating/Updating MutatingWebhook %s", fmt.Sprintf("%s", reconciler.name))
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
-		cr.Webhooks = []v1beta1.MutatingWebhook{
+		cr.Webhooks = []admissionregistrationv1.MutatingWebhook{
 			{
 				Name:        fmt.Sprintf("%s", reconciler.webhookName),
 				SideEffects: &sideEffects,
-				ClientConfig: v1beta1.WebhookClientConfig{
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					CABundle: caBundle,
-					Service: &v1beta1.ServiceReference{
+					Service: &admissionregistrationv1.ServiceReference{
 						Namespace: namespace,
 						Name:      operatorPodServiceName,
 						Path:      &reconciler.Path,
 						Port:      &port,
 					},
 				},
-				Rules: []v1beta1.RuleWithOperations{
+				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: reconciler.rule.Operations,
-						Rule: v1beta1.Rule{
+						Rule: admissionregistrationv1.Rule{
 							APIGroups:   reconciler.rule.APIGroups,
 							APIVersions: reconciler.rule.APIVersions,
 							Resources:   reconciler.rule.Resources,
@@ -140,7 +140,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 					},
 				},
 				MatchPolicy:             &matchPolicy,
-				AdmissionReviewVersions: []string{"v1beta1"},
+				AdmissionReviewVersions: []string{"v1"},
 				FailurePolicy:           &ignorePolicy,
 				TimeoutSeconds:          &timeoutSeconds,
 			},
@@ -163,16 +163,16 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 //Reconcile ValidatingWebhookConfiguration
 func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error {
 	var (
-		sideEffects    = v1beta1.SideEffectClassNone
+		sideEffects    = admissionregistrationv1.SideEffectClassNone
 		port           = int32(servicePort)
-		matchPolicy    = v1beta1.Exact
-		failurePolicy  = v1beta1.Fail
+		matchPolicy    = admissionregistrationv1.Exact
+		failurePolicy  = admissionregistrationv1.Fail
 		timeoutSeconds = int32(10)
 	)
 
 	namespace := utils.GetWatchNamespace()
 
-	cr := &v1beta1.ValidatingWebhookConfiguration{
+	cr := &admissionregistrationv1.ValidatingWebhookConfiguration{
 		ObjectMeta: v1.ObjectMeta{
 			Name: fmt.Sprintf("%s", reconciler.name),
 		},
@@ -183,23 +183,23 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 
 	klog.Infof("Creating/Updating ValidatingWebhook %s", fmt.Sprintf("%s", reconciler.name))
 	_, err := controllerutil.CreateOrUpdate(ctx, client, cr, func() error {
-		cr.Webhooks = []v1beta1.ValidatingWebhook{
+		cr.Webhooks = []admissionregistrationv1.ValidatingWebhook{
 			{
 				Name:        fmt.Sprintf("%s", reconciler.webhookName),
 				SideEffects: &sideEffects,
-				ClientConfig: v1beta1.WebhookClientConfig{
+				ClientConfig: admissionregistrationv1.WebhookClientConfig{
 					CABundle: caBundle,
-					Service: &v1beta1.ServiceReference{
+					Service: &admissionregistrationv1.ServiceReference{
 						Namespace: namespace,
 						Name:      operatorPodServiceName,
 						Path:      &reconciler.Path,
 						Port:      &port,
 					},
 				},
-				Rules: []v1beta1.RuleWithOperations{
+				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
 						Operations: reconciler.rule.Operations,
-						Rule: v1beta1.Rule{
+						Rule: admissionregistrationv1.Rule{
 							APIGroups:   reconciler.rule.APIGroups,
 							APIVersions: reconciler.rule.APIVersions,
 							Resources:   reconciler.rule.Resources,
@@ -208,7 +208,7 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 					},
 				},
 				MatchPolicy:             &matchPolicy,
-				AdmissionReviewVersions: []string{"v1beta1"},
+				AdmissionReviewVersions: []string{"v1"},
 				FailurePolicy:           &failurePolicy,
 				TimeoutSeconds:          &timeoutSeconds,
 			},

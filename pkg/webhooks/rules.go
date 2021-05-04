@@ -16,14 +16,14 @@
 
 package webhooks
 
-import "k8s.io/api/admissionregistration/v1beta1"
+import admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 
 // The `RuleWithOperations` and `Rule` types redefine the original ones from
-// k8s.io/api/admissionregistration/v1beta1 in order to allow to define methods
+// k8s.io/api/admissionregistration/v1 in order to allow to define methods
 // to build the rule as a fluent interface.
 
 type RuleWithOperations struct {
-	Operations []v1beta1.OperationType
+	Operations []admissionregistrationv1.OperationType
 	Rule
 }
 
@@ -31,7 +31,7 @@ type Rule struct {
 	APIGroups   []string
 	APIVersions []string
 	Resources   []string
-	Scope       v1beta1.ScopeType
+	Scope       admissionregistrationv1.ScopeType
 }
 
 func NewRule() RuleWithOperations {
@@ -47,27 +47,27 @@ func (rule RuleWithOperations) OneResource(apiGroup, apiVersion, resource string
 }
 
 func (rule RuleWithOperations) NamespacedScope() RuleWithOperations {
-	rule.Scope = v1beta1.NamespacedScope
+	rule.Scope = admissionregistrationv1.NamespacedScope
 
 	return rule
 }
 
 func (rule RuleWithOperations) ForCreate() RuleWithOperations {
-	rule.Operations = append(rule.Operations, v1beta1.Create)
+	rule.Operations = append(rule.Operations, admissionregistrationv1.Create)
 	return rule
 }
 
 func (rule RuleWithOperations) ForUpdate() RuleWithOperations {
-	rule.Operations = append(rule.Operations, v1beta1.Update)
+	rule.Operations = append(rule.Operations, admissionregistrationv1.Update)
 	return rule
 }
 
 func (rule RuleWithOperations) ForDelete() RuleWithOperations {
-	rule.Operations = append(rule.Operations, v1beta1.Delete)
+	rule.Operations = append(rule.Operations, admissionregistrationv1.Delete)
 	return rule
 }
 
 func (rule RuleWithOperations) ForAll() RuleWithOperations {
-	rule.Operations = append(rule.Operations, v1beta1.OperationAll)
+	rule.Operations = append(rule.Operations, admissionregistrationv1.OperationAll)
 	return rule
 }
