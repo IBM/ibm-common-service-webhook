@@ -68,8 +68,8 @@ type CSWebhook struct {
 	// Register for the webhook into the server
 	Register WebhookRegister
 
-	// EnableNsSelector for add namespaceselector "managed-by-common-service-webhook: true"
-	EnableNsSelector bool
+	// NsSelector for add namespaceselector to the admission webhook
+	NsSelector v1.LabelSelector
 }
 
 const (
@@ -190,9 +190,7 @@ func (webhookConfig *CSWebhookConfig) Reconcile(ctx context.Context, client k8sc
 		reconciler.SetName(webhook.Name)
 		reconciler.SetWebhookName(webhook.WebhookName)
 		reconciler.SetRule(webhook.Rule)
-		if webhook.EnableNsSelector {
-			reconciler.EnableNsSelector()
-		}
+		reconciler.SetNsSelector(webhook.NsSelector)
 		klog.Infof("Reconciling webhook %s", webhook.Name)
 		if err := reconciler.Reconcile(ctx, client, caBundle); err != nil {
 			return err

@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/IBM/ibm-common-service-webhook/pkg/apis"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller"
@@ -104,6 +105,11 @@ func main() {
 func setupWebhooks(mgr manager.Manager, namespace string) error {
 
 	klog.Info("Creating common service webhook configuration")
+	managedbyCSWebhookLabel := make(map[string]string)
+	managedbyCSWebhookLabel["managed-by-common-service-webhook"] = "true"
+	managedbyCSSelector := v1.LabelSelector{
+		MatchLabels: managedbyCSWebhookLabel,
+	}
 	webhooks.Config.AddWebhook(webhooks.CSWebhook{
 		Name:        "ibm-common-service-webhook-configuration",
 		WebhookName: "cs-podpreset.operator.ibm.com",
@@ -121,7 +127,7 @@ func setupWebhooks(mgr manager.Manager, namespace string) error {
 				},
 			},
 		},
-		EnableNsSelector: true,
+		NsSelector: managedbyCSSelector,
 	})
 	if utils.GetEnableOpreqWebhook() {
 		webhooks.Config.AddWebhook(webhooks.CSWebhook{
@@ -143,6 +149,35 @@ func setupWebhooks(mgr manager.Manager, namespace string) error {
 			},
 		})
 	}
+	webhooks.Config.AddWebhook(webhooks.CSWebhook{
+		Name:        "ibm-cs-ns-mapping-webhook-configuration",
+		WebhookName: "cs-ns-mapping-configmap.operator.ibm.com",
+		Rule: webhooks.NewRule().
+			OneResource("", "v1", "configmaps").
+			ForUpdate().
+			ForCreate().
+			NamespacedScope(),
+		Register: webhooks.AdmissionWebhookRegister{
+			Type: webhooks.MutatingType,
+			Path: "/validate-ibm-cs-ns-map",
+			Hook: &admission.Webhook{
+				Handler: &podpreset.Mutator{
+					Client: mgr.GetClient(),
+				},
+			},
+		},
+		NsSelector: v1.LabelSelector{
+			MatchExpressions: []v1.LabelSelectorRequirement{
+				{
+					Key: "name",
+					Operator: v1.LabelSelectorOpIn,
+					Values: []string{
+						"kube-public",
+					},
+				},
+			},
+		},
+	})
 
 	klog.Info("setting up webhook server")
 	if err := webhooks.Config.SetupServer(mgr, namespace); err != nil {
