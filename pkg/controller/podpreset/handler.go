@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
 )
 
 // Mutator is the struct of webhook
