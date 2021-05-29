@@ -25,13 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller"
-	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
+	ctrl "sigs.k8s.io/controller-runtime"
 
-	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/operator/v1alpha1"
+	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
 	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
 )
 
@@ -39,48 +35,12 @@ const (
 	podpresetName = "cs-podpreset.operator.ibm.com"
 )
 
-/**
-* USER ACTION REQUIRED: This is a scaffold file intended for the user to modify with their own Controller
-* business logic.  Delete these comments after modifying this file.*
- */
-
-// Add creates a new PodPreset Controller and adds it to the Manager. The Manager will set fields on the Controller
-// and Start it when the Manager is Started.
-func Add(mgr manager.Manager) error {
-	return add(mgr, newReconciler(mgr))
-}
-
-// newReconciler returns a new reconcile.Reconciler
-func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcilePodPreset{client: mgr.GetClient(), scheme: mgr.GetScheme()}
-}
-
-// add adds a new Controller to mgr with r as the reconcile.Reconciler
-func add(mgr manager.Manager, r reconcile.Reconciler) error {
-	// Create a new controller
-	c, err := controller.New("podpreset-controller", mgr, controller.Options{Reconciler: r})
-	if err != nil {
-		return err
-	}
-
-	// Watch for changes to primary resource PodPreset
-	err = c.Watch(&source.Kind{Type: &operatorv1alpha1.PodPreset{}}, &handler.EnqueueRequestForObject{})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// blank assignment to verify that ReconcilePodPreset implements reconcile.Reconciler
-var _ reconcile.Reconciler = &ReconcilePodPreset{}
-
 // ReconcilePodPreset reconciles a PodPreset object
 type ReconcilePodPreset struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
-	client client.Client
-	scheme *runtime.Scheme
+	Client client.Client
+	Scheme *runtime.Scheme
 }
 
 // Reconcile reads that state of the cluster for a PodPreset object and makes changes based on the state read
@@ -90,41 +50,47 @@ type ReconcilePodPreset struct {
 // Note:
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcilePodPreset) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcilePodPreset) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	klog.Infof("Reconciling PodPreset %s/%s", request.Namespace, request.Name)
 
 	ns := &corev1.Namespace{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: request.Namespace}, ns)
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: request.Namespace}, ns)
 	if err != nil {
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	ns.SetLabels(map[string]string{
 		"managed-by-common-service-webhook": "true",
 	})
 
-	if err := r.client.Update(context.TODO(), ns); err != nil {
-		return reconcile.Result{}, err
+	if err := r.Client.Update(context.TODO(), ns); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	// Fetch the PodPreset instance
 	instance := &operatorv1alpha1.PodPreset{}
-	err = r.client.Get(context.TODO(), request.NamespacedName, instance)
+	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
-			return reconcile.Result{}, nil
+			return ctrl.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		return reconcile.Result{}, err
+		return ctrl.Result{}, err
 	}
 
 	// Reconcile the webhooks
-	if err := webhooks.Config.Reconcile(context.TODO(), r.client, instance); err != nil {
-		return reconcile.Result{}, err
+	if err := webhooks.Config.Reconcile(context.TODO(), r.Client, instance); err != nil {
+		return ctrl.Result{}, err
 	}
 
-	return reconcile.Result{}, nil
+	return ctrl.Result{}, nil
+}
+
+func (r *ReconcilePodPreset) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+	For(&operatorv1alpha1.PodPreset{}).
+	Complete(r)
 }

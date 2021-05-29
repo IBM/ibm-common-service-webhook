@@ -21,14 +21,18 @@ import (
 	"runtime"
 
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
-	"github.com/IBM/ibm-common-service-webhook/pkg/apis"
-	"github.com/IBM/ibm-common-service-webhook/pkg/controller"
+	odlmv1alpha1 "github.com/IBM/operand-deployment-lifecycle-manager/api/v1alpha1"
+
+	apisv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/operandrequest"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/podpreset"
 	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
@@ -49,6 +53,17 @@ func printVersion() {
 	klog.Infof("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
 }
 
+var (
+	scheme = k8sruntime.NewScheme()
+)
+
+func init() {
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(apisv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(odlmv1alpha1.AddToScheme(scheme))
+	// +kubebuilder:scaffold:scheme
+}
+
 func main() {
 
 	klog.InitFlags(nil)
@@ -56,18 +71,17 @@ func main() {
 
 	printVersion()
 
-	// Get a config to talk to the apiserver
-	cfg, err := config.GetConfig()
-	if err != nil {
-		klog.Error(err, "")
-		os.Exit(1)
+	namespace := utils.GetWatchNamespace()
+	options := ctrl.Options{
+		Scheme:             scheme,
+		Namespace: namespace,
 	}
 
-	namespace := utils.GetWatchNamespace()
-	// Create a new Cmd to provide shared dependencies and start components
-	mgr, err := manager.New(cfg, manager.Options{
-		Namespace: namespace,
-	})
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), options)
+	if err != nil {
+		klog.Errorf("unable to start manager: %v", err)
+		os.Exit(1)
+	}
 
 	if err != nil {
 		klog.Error(err, "")
@@ -76,15 +90,11 @@ func main() {
 
 	klog.Info("Registering Components.")
 
-	// Setup Scheme for all resources
-	if err := apis.AddToScheme(mgr.GetScheme()); err != nil {
-		klog.Error(err, "")
-		os.Exit(1)
-	}
-
-	// Setup all Controllers
-	if err := controller.AddToManager(mgr); err != nil {
-		klog.Error(err, "")
+	if err = (&podpreset.ReconcilePodPreset{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		klog.Errorf("unable to create controller: %v", err)
 		os.Exit(1)
 	}
 
