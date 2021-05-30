@@ -20,19 +20,20 @@ import (
 	"os"
 	"runtime"
 
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/klog"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
 	odlmv1alpha1 "github.com/IBM/operand-deployment-lifecycle-manager/api/v1alpha1"
 
 	apisv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
+	"github.com/IBM/ibm-common-service-webhook/pkg/controller/nsmappingconfigmap"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/operandrequest"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/podpreset"
 	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
@@ -73,7 +74,7 @@ func main() {
 
 	namespace := utils.GetWatchNamespace()
 	options := ctrl.Options{
-		Scheme:             scheme,
+		Scheme:    scheme,
 		Namespace: namespace,
 	}
 
@@ -158,36 +159,36 @@ func setupWebhooks(mgr manager.Manager, namespace string) error {
 				},
 			},
 		})
-	}
-	webhooks.Config.AddWebhook(webhooks.CSWebhook{
-		Name:        "ibm-cs-ns-mapping-webhook-configuration",
-		WebhookName: "cs-ns-mapping-configmap.operator.ibm.com",
-		Rule: webhooks.NewRule().
-			OneResource("", "v1", "configmaps").
-			ForUpdate().
-			ForCreate().
-			NamespacedScope(),
-		Register: webhooks.AdmissionWebhookRegister{
-			Type: webhooks.MutatingType,
-			Path: "/validate-ibm-cs-ns-map",
-			Hook: &admission.Webhook{
-				Handler: &podpreset.Mutator{
-					Client: mgr.GetClient(),
-				},
-			},
-		},
-		NsSelector: v1.LabelSelector{
-			MatchExpressions: []v1.LabelSelectorRequirement{
-				{
-					Key: "name",
-					Operator: v1.LabelSelectorOpIn,
-					Values: []string{
-						"kube-public",
+		webhooks.Config.AddWebhook(webhooks.CSWebhook{
+			Name:        "ibm-cs-ns-mapping-webhook-configuration",
+			WebhookName: "cs-ns-mapping-configmap.operator.ibm.com",
+			Rule: webhooks.NewRule().
+				OneResource("", "v1", "configmaps").
+				ForUpdate().
+				ForCreate().
+				NamespacedScope(),
+			Register: webhooks.AdmissionWebhookRegister{
+				Type: webhooks.ValidatingType,
+				Path: "/validate-ibm-cs-ns-map",
+				Hook: &admission.Webhook{
+					Handler: &nsmappingconfigmap.Mutator{
+						Reader: mgr.GetAPIReader(),
 					},
 				},
 			},
-		},
-	})
+			NsSelector: v1.LabelSelector{
+				MatchExpressions: []v1.LabelSelectorRequirement{
+					{
+						Key:      "kubernetes.io/metadata.name",
+						Operator: v1.LabelSelectorOpIn,
+						Values: []string{
+							"kube-public",
+						},
+					},
+				},
+			},
+		})
+	}
 
 	klog.Info("setting up webhook server")
 	if err := webhooks.Config.SetupServer(mgr, namespace); err != nil {

@@ -77,18 +77,18 @@ func (reconciler *CompositeWebhookReconciler) Reconcile(ctx context.Context, cli
 }
 
 type ValidatingWebhookReconciler struct {
-	Path             string
-	name             string
-	webhookName      string
-	rule             RuleWithOperations
+	Path              string
+	name              string
+	webhookName       string
+	rule              RuleWithOperations
 	NameSpaceSelector v1.LabelSelector
 }
 
 type MutatingWebhookReconciler struct {
-	Path             string
-	name             string
-	webhookName      string
-	rule             RuleWithOperations
+	Path              string
+	name              string
+	webhookName       string
+	rule              RuleWithOperations
 	NameSpaceSelector v1.LabelSelector
 }
 

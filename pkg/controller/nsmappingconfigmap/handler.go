@@ -18,19 +18,14 @@ package nsmappingconfigmap
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
 	utilyaml "github.com/ghodss/yaml"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	odlmv1alpha1 "github.com/IBM/operand-deployment-lifecycle-manager/api/v1alpha1"
 )
 
 // Mutator is the struct of webhook
@@ -41,8 +36,8 @@ type Mutator struct {
 }
 
 type csMaps struct {
+	ControlNs     string      `json:"controlNamespace"`
 	NsMappingList []nsMapping `json:"namespaceMapping"`
-	DefaultCsNs   string      `json:"defaultCsNs"`
 }
 
 type nsMapping struct {
@@ -53,83 +48,54 @@ type nsMapping struct {
 // Handle mutates every creating pods
 func (p *Mutator) Handle(ctx context.Context, req admission.Request) admission.Response {
 
-	klog.Infof("Webhook is invoked by OperandRequest %s/%s", req.AdmissionRequest.Namespace, req.AdmissionRequest.Name)
-	opreq := &odlmv1alpha1.OperandRequest{}
-	ns := req.AdmissionRequest.Namespace
-	err := p.decoder.Decode(req, opreq)
+	if req.Name != "common-service-maps" || req.Namespace != "kube-public" {
+		return admission.Allowed("")
+	}
+
+	klog.Infof("Webhook is invoked by Configmap %s/%s", req.AdmissionRequest.Namespace, req.AdmissionRequest.Name)
+	cm := &corev1.ConfigMap{}
+	err := p.decoder.Decode(req, cm)
 	if err != nil {
 		klog.Error(err, "Error occurred decoding OperandRequest")
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	copy := opreq.DeepCopy()
 
-	err = p.mutatePodsFn(ctx, copy, ns)
-
-	if err != nil {
-		klog.Error(err, "Error occurred mutating OperandRequest")
-		return admission.Errored(http.StatusInternalServerError, err)
-	}
-	marshaledOpreq, err := json.Marshal(opreq)
-	marshaledcopy, err := json.Marshal(copy)
-
-	// admission.PatchResponse generates a Response containing patches.
-	return admission.PatchResponseFromRaw(marshaledOpreq, marshaledcopy)
-
-}
-
-// Mutates function values
-func (p *Mutator) mutatePodsFn(ctx context.Context, opreq *odlmv1alpha1.OperandRequest, namespace string) error {
-
-	csConfigmap := &corev1.ConfigMap{}
-
-	err := p.Reader.Get(ctx, types.NamespacedName{Namespace: "kube-public", Name: "common-service-maps"}, csConfigmap)
-
-	if err != nil {
-		if errors.IsNotFound(err) {
-			klog.Infof("common service configmap kube-public/common-service-maps is not found: %v", err)
-			return nil
-		}
-		return fmt.Errorf("failed to fetch configmap kube-public/common-service-maps: %v", err)
-	}
-
-	commonServiceMaps := csConfigmap.Data["common-service-maps.yaml"]
+	commonServiceMaps := cm.Data["common-service-maps.yaml"]
 	var cmData csMaps
 	if err := utilyaml.Unmarshal([]byte(commonServiceMaps), &cmData); err != nil {
-		return err
+		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	var defaultCsNs string
-	if cmData.DefaultCsNs == "" {
-		defaultCsNs = "ibm-common-services"
-	} else {
-		defaultCsNs = cmData.DefaultCsNs
-	}
+	CsNsSet := make(map[string]interface{})
+	RequestNsSet := make(map[string]interface{})
 
 	for _, nsMapping := range cmData.NsMappingList {
-		if findNamespace(nsMapping.RequestNS, opreq.Namespace) {
-			for index, req := range opreq.Spec.Requests {
-				if req.RegistryNamespace == defaultCsNs {
-					req.RegistryNamespace = nsMapping.CsNs
-					opreq.Spec.Requests[index] = req
-				}
+		// validate masterNamespace and controlNamespace
+		if cmData.ControlNs == nsMapping.CsNs {
+			return admission.Denied(fmt.Sprintf("controlNamespace: %v cannot be the same as one of the map-to-common-service-namespace", cmData.ControlNs))
+		}
+		if _, ok := CsNsSet[nsMapping.CsNs]; ok {
+			return admission.Denied(fmt.Sprintf("map-to-common-service-namespace: %v exists in other namespace mappings", nsMapping.CsNs))
+		}
+		CsNsSet[nsMapping.CsNs] = struct{}{}
+		// validate CloudPak Namespace and controlNamespace
+		for _, ns := range nsMapping.RequestNS {
+			if cmData.ControlNs == ns {
+				return admission.Denied(fmt.Sprintf("controlNamespace: %v cannot be the same as one of the requested-from-namespace", cmData.ControlNs))
 			}
-			break
+			if _, ok := RequestNsSet[ns]; ok {
+				return admission.Denied(fmt.Sprintf("There are multiple %v exit in the requested-from-namespace", ns))
+			}
+			RequestNsSet[ns] = struct{}{}
 		}
 	}
 
-	return nil
+	// admission.PatchResponse generates a Response containing patches.
+	return admission.Allowed("")
+
 }
 
-func findNamespace(nsList []string, nsName string) (exist bool) {
-	for _, ns := range nsList {
-		if ns == nsName {
-			return true
-		}
-	}
-	return
-}
-
-// InjectDecoder injects the decoder into the Mutator
+// InjectDecoder injects the decoder into the Validator
 func (p *Mutator) InjectDecoder(d *admission.Decoder) error {
 	p.decoder = d
 	return nil
