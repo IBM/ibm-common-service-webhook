@@ -24,10 +24,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/klog"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
+	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
 	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
 )
 
@@ -57,6 +58,13 @@ func (r *ReconcilePodPreset) Reconcile(ctx context.Context, request ctrl.Request
 	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: request.Namespace}, ns)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if utils.GetEnableOpreqWebhook() {
+		if err := r.AddNameLabeltoNs("kube-public"); err != nil {
+			klog.Error(err, "Failed to add label to namespace kube-public")
+			return ctrl.Result{}, err
+		}
 	}
 
 	ns.SetLabels(map[string]string{
@@ -91,6 +99,29 @@ func (r *ReconcilePodPreset) Reconcile(ctx context.Context, request ctrl.Request
 
 func (r *ReconcilePodPreset) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-	For(&operatorv1alpha1.PodPreset{}).
-	Complete(r)
+		For(&operatorv1alpha1.PodPreset{}).
+		Complete(r)
+}
+
+func (r *ReconcilePodPreset) AddNameLabeltoNs(nsName string) error {
+	ns := &corev1.Namespace{}
+	err := r.Client.Get(context.TODO(), types.NamespacedName{Name: nsName}, ns)
+	if err != nil {
+		klog.Error(err)
+		return err
+	}
+
+	if _, ok := ns.GetLabels()["kubernetes.io/metadata.name"]; ok {
+		return nil
+	}
+
+	ns.SetLabels(map[string]string{
+		"kubernetes.io/metadata.name": nsName,
+	})
+
+	if err := r.Client.Update(context.TODO(), ns); err != nil {
+		klog.Error(err)
+		return err
+	}
+	return nil
 }

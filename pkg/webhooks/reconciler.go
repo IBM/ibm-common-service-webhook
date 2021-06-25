@@ -34,7 +34,7 @@ type WebhookReconciler interface {
 	SetName(name string)
 	SetWebhookName(webhookName string)
 	SetRule(rule RuleWithOperations)
-	EnableNsSelector()
+	SetNsSelector(selector v1.LabelSelector)
 	Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error
 }
 
@@ -60,9 +60,9 @@ func (reconciler *CompositeWebhookReconciler) SetRule(rule RuleWithOperations) {
 	}
 }
 
-func (reconciler *CompositeWebhookReconciler) EnableNsSelector() {
+func (reconciler *CompositeWebhookReconciler) SetNsSelector(selector v1.LabelSelector) {
 	for _, innerReconciler := range reconciler.Reconcilers {
-		innerReconciler.EnableNsSelector()
+		innerReconciler.SetNsSelector(selector)
 	}
 }
 
@@ -77,19 +77,19 @@ func (reconciler *CompositeWebhookReconciler) Reconcile(ctx context.Context, cli
 }
 
 type ValidatingWebhookReconciler struct {
-	Path             string
-	name             string
-	webhookName      string
-	rule             RuleWithOperations
-	enableNsSelector bool
+	Path              string
+	name              string
+	webhookName       string
+	rule              RuleWithOperations
+	NameSpaceSelector v1.LabelSelector
 }
 
 type MutatingWebhookReconciler struct {
-	Path             string
-	name             string
-	webhookName      string
-	rule             RuleWithOperations
-	enableNsSelector bool
+	Path              string
+	name              string
+	webhookName       string
+	rule              RuleWithOperations
+	NameSpaceSelector v1.LabelSelector
 }
 
 //Reconcile MutatingWebhookConfiguration
@@ -145,12 +145,8 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 				TimeoutSeconds:          &timeoutSeconds,
 			},
 		}
-		if reconciler.enableNsSelector {
-			for index := range cr.Webhooks {
-				cr.Webhooks[index].NamespaceSelector = &v1.LabelSelector{
-					MatchLabels: webhookLabel,
-				}
-			}
+		for index := range cr.Webhooks {
+			cr.Webhooks[index].NamespaceSelector = &reconciler.NameSpaceSelector
 		}
 		return nil
 	})
@@ -213,12 +209,8 @@ func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, cl
 				TimeoutSeconds:          &timeoutSeconds,
 			},
 		}
-		if reconciler.enableNsSelector {
-			for index := range cr.Webhooks {
-				cr.Webhooks[index].NamespaceSelector = &v1.LabelSelector{
-					MatchLabels: webhookLabel,
-				}
-			}
+		for index := range cr.Webhooks {
+			cr.Webhooks[index].NamespaceSelector = &reconciler.NameSpaceSelector
 		}
 		return nil
 	})
@@ -252,10 +244,10 @@ func (reconciler *MutatingWebhookReconciler) SetRule(rule RuleWithOperations) {
 	reconciler.rule = rule
 }
 
-func (reconciler *MutatingWebhookReconciler) EnableNsSelector() {
-	reconciler.enableNsSelector = true
+func (reconciler *MutatingWebhookReconciler) SetNsSelector(selector v1.LabelSelector) {
+	reconciler.NameSpaceSelector = selector
 }
 
-func (reconciler *ValidatingWebhookReconciler) EnableNsSelector() {
-	reconciler.enableNsSelector = true
+func (reconciler *ValidatingWebhookReconciler) SetNsSelector(selector v1.LabelSelector) {
+	reconciler.NameSpaceSelector = selector
 }
