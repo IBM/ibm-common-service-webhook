@@ -67,9 +67,19 @@ func (r *ReconcilePodPreset) Reconcile(ctx context.Context, request ctrl.Request
 		}
 	}
 
-	ns.SetLabels(map[string]string{
-		"managed-by-common-service-webhook": "true",
-	})
+	currentLabels := ns.GetLabels()
+	if len(currentLabels) == 0 {
+		ns.SetLabels(map[string]string{
+			"managed-by-common-service-webhook": "true",
+		})
+	} else {
+		currentLabels["managed-by-common-service-webhook"] = "true"
+		ns.SetLabels(currentLabels)
+	}
+
+	if err := r.Client.Update(context.TODO(), ns); err != nil {
+		return ctrl.Result{}, err
+	}
 
 	if err := r.Client.Update(context.TODO(), ns); err != nil {
 		return ctrl.Result{}, err
