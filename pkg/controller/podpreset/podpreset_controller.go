@@ -81,10 +81,6 @@ func (r *ReconcilePodPreset) Reconcile(ctx context.Context, request ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	if err := r.Client.Update(context.TODO(), ns); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	// Fetch the PodPreset instance
 	instance := &operatorv1alpha1.PodPreset{}
 	err = r.Client.Get(context.TODO(), request.NamespacedName, instance)
