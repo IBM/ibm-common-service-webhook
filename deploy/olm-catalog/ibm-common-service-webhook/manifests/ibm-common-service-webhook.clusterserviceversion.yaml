@@ -200,4 +200,4 @@ spec:
   maturity: alpha
   provider: {}
   replaces: ibm-common-service-webhook.v0.0.1
-  version: 1.5.0
+  version: 1.6.0
