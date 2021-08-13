@@ -201,6 +201,6 @@ spec:
   provider: {}
   relatedImages:
   - image: quay.io/opencloudio/ibm-cs-webhook:1.6.0
-    name: ibm-common-service-webhook
+    name: IBM_CS_WEBHOOK_IMAGE
   replaces: ibm-common-service-webhook.v0.0.1
   version: 1.6.0
