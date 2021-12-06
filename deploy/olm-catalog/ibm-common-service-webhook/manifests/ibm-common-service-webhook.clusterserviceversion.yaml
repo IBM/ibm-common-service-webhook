@@ -200,7 +200,7 @@ spec:
   maturity: alpha
   provider: {}
   relatedImages:
-  - image: quay.io/opencloudio/ibm-cs-webhook:1.10.0
+  - image: quay.io/opencloudio/ibm-cs-webhook:1.11.0
     name: IBM_CS_WEBHOOK_IMAGE
   replaces: ibm-common-service-webhook.v0.0.1
-  version: 1.10.0
+  version: 1.11.0
