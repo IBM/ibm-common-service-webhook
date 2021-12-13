@@ -148,9 +148,6 @@ test: ## Run unit test
 	@echo "Running the tests for $(IMAGE_NAME) on $(LOCAL_ARCH)..."
 	@go test $(TESTARGS) ./pkg/controller/...
 
-coverage: ## Run code coverage test
-	@common/scripts/codecov.sh ${BUILD_LOCALLY} "pkg/controller"
-
 ##@ Release
 
 multiarch-image: $(CONFIG_DOCKER_TARGET)
