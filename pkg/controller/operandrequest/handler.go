@@ -106,7 +106,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, opreq *odlmv1alpha1.OperandR
 	}
 
 	for _, nsMapping := range cmData.NsMappingList {
-		if findNamespace(nsMapping.RequestNS, opreq.Namespace) {
+		if findNamespace(append(nsMapping.RequestNS, nsMapping.CsNs), opreq.Namespace) {
 			for index, req := range opreq.Spec.Requests {
 				if req.RegistryNamespace == defaultCsNs {
 					req.RegistryNamespace = nsMapping.CsNs
