@@ -92,7 +92,7 @@ type MutatingWebhookReconciler struct {
 	NameSpaceSelector v1.LabelSelector
 }
 
-//Reconcile MutatingWebhookConfiguration
+// Reconcile MutatingWebhookConfiguration
 func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error {
 	var (
 		sideEffects    = admissionregistrationv1.SideEffectClassNone
@@ -156,7 +156,7 @@ func (reconciler *MutatingWebhookReconciler) Reconcile(ctx context.Context, clie
 	return err
 }
 
-//Reconcile ValidatingWebhookConfiguration
+// Reconcile ValidatingWebhookConfiguration
 func (reconciler *ValidatingWebhookReconciler) Reconcile(ctx context.Context, client k8sclient.Client, caBundle []byte) error {
 	var (
 		sideEffects    = admissionregistrationv1.SideEffectClassNone
