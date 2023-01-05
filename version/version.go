@@ -18,5 +18,5 @@ package version
 
 var (
 	// Version of the operator
-	Version = "1.15.6"
+	Version = "1.15.7"
 )
