@@ -1,4 +1,4 @@
-FROM hyc-cloud-private-edge-docker-local.artifactory.swg-devops.com/build-images/ubi8-minimal:latest
+FROM docker-na-public.artifactory.swg-devops.com/hyc-cloud-private-edge-docker-local/build-images/ubi8-minimal:latest
 ARG VCS_REF
 ARG VCS_URL
 
