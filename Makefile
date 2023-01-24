@@ -28,7 +28,7 @@ NAMESPACE=ibm-common-services
 # IMAGE_REPO, IMAGE_NAME and RELEASE_TAG environment variable.
 IMAGE_REPO ?= quay.io/opencloudio
 
-REGISTRY ?= "hyc-cloud-private-integration-docker-local.artifactory.swg-devops.com/ibmcom"
+REGISTRY ?= "docker-na-public.artifactory.swg-devops.com/hyc-cloud-private-integration-docker-local/ibmcom"
 
 IMAGE_NAME ?= ibm-cs-webhook
 
