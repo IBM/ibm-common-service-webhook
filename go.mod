@@ -1,6 +1,6 @@
 module github.com/IBM/ibm-common-service-webhook
 
-go 1.19
+go 1.20
 
 require (
 	github.com/IBM/operand-deployment-lifecycle-manager v1.4.1
