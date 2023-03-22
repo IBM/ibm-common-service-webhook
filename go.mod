@@ -1,6 +1,6 @@
 module github.com/IBM/ibm-common-service-webhook
 
-go 1.19
+go 1.20
 
 require (
 	github.com/IBM/operand-deployment-lifecycle-manager v1.4.1
@@ -42,12 +42,12 @@ require (
 	github.com/prometheus/procfs v0.6.0 // indirect
 	github.com/sirupsen/logrus v1.7.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.0.0-20201216223049-8b5274cf687f // indirect
-	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
+	golang.org/x/crypto v0.0.0-20220314234659-1baeb1ce4c0b // indirect
+	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
-	golang.org/x/sys v0.0.0-20210603081109-ebe580a85c40 // indirect
-	golang.org/x/term v0.0.0-20201117132131-f5c789dd3221 // indirect
-	golang.org/x/text v0.3.4 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/term v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
