@@ -87,7 +87,7 @@ spec:
                 - name: OPERATOR_NAME
                   value: ibm-common-service-webhook
                 image: quay.io/opencloudio/ibm-cs-webhook:latest
-                imagePullPolicy: Always
+                imagePullPolicy: IfNotPresent
                 name: ibm-common-service-webhook
                 ports:
                 - containerPort: 8443
