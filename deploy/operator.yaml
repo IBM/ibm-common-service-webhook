@@ -18,7 +18,7 @@ spec:
           image: quay.io/opencloudio/ibm-cs-webhook:latest
           command:
           - ibm-common-service-webhook
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           env:
             - name: WATCH_NAMESPACE
               valueFrom:
