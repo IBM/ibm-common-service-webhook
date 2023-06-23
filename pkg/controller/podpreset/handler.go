@@ -78,7 +78,7 @@ func (p *Mutator) mutatePodsFn(ctx context.Context, pod *corev1.Pod, namespace s
 
 	// Ignore if exclusion annotation is present
 	if podAnnotations := pod.GetAnnotations(); podAnnotations != nil {
-		if podAnnotations[corev1.PodPresetOptOutAnnotationKey] == "true" {
+		if podAnnotations["podpreset.admission.kubernetes.io/exclude"] == "true" {
 			klog.Infof("Pod %s has been patched", pod.Name)
 			return nil
 		}
