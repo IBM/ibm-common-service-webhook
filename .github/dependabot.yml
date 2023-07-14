@@ -4,3 +4,4 @@ updates:
     directory: "/build"
     schedule:
       interval: daily
+    target-branch: "release-ltsr"
