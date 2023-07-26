@@ -116,30 +116,7 @@ func main() {
 func setupWebhooks(mgr manager.Manager, namespace string) error {
 
 	klog.Info("Creating common service webhook configuration")
-	managedbyCSWebhookLabel := make(map[string]string)
-	managedbyCSWebhookLabel["managed-by-common-service-webhook"] = "true"
-	managedbyCSSelector := v1.LabelSelector{
-		MatchLabels: managedbyCSWebhookLabel,
-	}
-	webhooks.Config.AddWebhook(webhooks.CSWebhook{
-		Name:        "ibm-common-service-webhook-configuration",
-		WebhookName: "cs-podpreset.operator.ibm.com",
-		Rule: webhooks.NewRule().
-			OneResource("", "v1", "pods").
-			ForUpdate().
-			ForCreate().
-			NamespacedScope(),
-		Register: webhooks.AdmissionWebhookRegister{
-			Type: webhooks.MutatingType,
-			Path: "/mutate-ibm-cs-pod",
-			Hook: &admission.Webhook{
-				Handler: &podpreset.Mutator{
-					Client: mgr.GetClient(),
-				},
-			},
-		},
-		NsSelector: managedbyCSSelector,
-	})
+
 	if utils.GetEnableOpreqWebhook() {
 		webhooks.Config.AddWebhook(webhooks.CSWebhook{
 			Name:        "ibm-operandrequest-webhook-configuration",
