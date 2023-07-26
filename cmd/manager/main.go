@@ -35,6 +35,7 @@ import (
 	apisv1alpha1 "github.com/IBM/ibm-common-service-webhook/pkg/apis/v1alpha1"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/nsmappingconfigmap"
 	"github.com/IBM/ibm-common-service-webhook/pkg/controller/operandrequest"
+	"github.com/IBM/ibm-common-service-webhook/pkg/controller/podpreset"
 	"github.com/IBM/ibm-common-service-webhook/pkg/utils"
 	"github.com/IBM/ibm-common-service-webhook/pkg/webhooks"
 	"github.com/IBM/ibm-common-service-webhook/version"
@@ -90,6 +91,14 @@ func main() {
 
 	klog.Info("Registering Components.")
 
+	if err = (&podpreset.ReconcilePodPreset{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		klog.Errorf("unable to create controller: %v", err)
+		os.Exit(1)
+	}
+
 	// Start up the webhook server
 	if err := setupWebhooks(mgr, namespace); err != nil {
 		klog.Error(err, "Error setting up webhook server")
@@ -109,7 +118,28 @@ func setupWebhooks(mgr manager.Manager, namespace string) error {
 	klog.Info("Creating common service webhook configuration")
 	managedbyCSWebhookLabel := make(map[string]string)
 	managedbyCSWebhookLabel["managed-by-common-service-webhook"] = "true"
-
+	managedbyCSSelector := v1.LabelSelector{
+		MatchLabels: managedbyCSWebhookLabel,
+	}
+	webhooks.Config.AddWebhook(webhooks.CSWebhook{
+		Name:        "ibm-common-service-webhook-configuration",
+		WebhookName: "cs-podpreset.operator.ibm.com",
+		Rule: webhooks.NewRule().
+			OneResource("", "v1", "pods").
+			ForUpdate().
+			ForCreate().
+			NamespacedScope(),
+		Register: webhooks.AdmissionWebhookRegister{
+			Type: webhooks.MutatingType,
+			Path: "/mutate-ibm-cs-pod",
+			Hook: &admission.Webhook{
+				Handler: &podpreset.Mutator{
+					Client: mgr.GetClient(),
+				},
+			},
+		},
+		NsSelector: managedbyCSSelector,
+	})
 	if utils.GetEnableOpreqWebhook() {
 		webhooks.Config.AddWebhook(webhooks.CSWebhook{
 			Name:        "ibm-operandrequest-webhook-configuration",
